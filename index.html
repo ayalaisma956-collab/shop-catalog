@@ -381,7 +381,9 @@ function getItemState(id) {
 function setRate(id, rate) {
   const st = getItemState(id);
   st.status = (st.status === rate) ? '' : rate;
-  if ((st.status === 'hot' || st.status === 'med') && Object.keys(st.tiers).length === 0) {
+  // Only auto-select if the model has just 1 single grade; if multiple grades exist, never fake-select!
+  const itemObj = ITEMS.find(x => x.id === id);
+  if ((st.status === 'hot' || st.status === 'med') && itemObj && itemObj.tiers.length === 1) {
     st.tiers[0] = true;
   }
   saveState();
@@ -675,10 +677,18 @@ function generateSummaryText(includePrices) {
   ITEMS.forEach(it => {
     const st = getItemState(it.id);
     if (st.status === 'hot' || st.status === 'med') {
+      const fmtTier = (t) => includePrices && t.cny !== 'Pending' ? `${t.name} [¥${t.cny} / $${t.usd}]` : t.name;
       const chosenTiers = it.tiers
         .filter((_, idx) => st.tiers && st.tiers[idx])
-        .map(t => includePrices && t.cny !== 'Pending' ? `${t.name} [¥${t.cny} / $${t.usd}]` : t.name);
-      const tierStr = chosenTiers.length ? chosenTiers.join(' + ') : it.tiers.map(t => t.name).join(' / ');
+        .map(fmtTier);
+      let tierStr = '';
+      if (chosenTiers.length > 0) {
+        tierStr = chosenTiers.join(' + ');
+      } else if (it.tiers.length === 1) {
+        tierStr = fmtTier(it.tiers[0]);
+      } else {
+        tierStr = `⚠️ No grade tapped (Options: ${it.tiers.map(fmtTier).join(' / ')})`;
+      }
       const qtyStr = st.qty ? ` | Qty: ${st.qty}` : '';
       const noteStr = st.note ? ` | Note: ${st.note}` : '';
       const line = `• [${it.brand}] ${it.model} (${it.code}) — ${tierStr}${qtyStr}${noteStr}`;
@@ -732,12 +742,15 @@ function exportCSV() {
     const label = st.status === 'hot' ? 'FAST MOVER' : (st.status === 'med' ? 'MEDIUM' : 'SKIP');
     const chosen = it.tiers.filter((_, idx) => st.tiers && st.tiers[idx]);
     const tiersUsed = chosen.length ? chosen : it.tiers;
+    const gradeCol = chosen.length
+      ? chosen.map(t => t.name).join(' + ')
+      : (it.tiers.length === 1 ? it.tiers[0].name : 'No specific grade tapped (Model only)');
     rows.push([
       it.brand,
       it.model,
       it.code,
       label,
-      tiersUsed.map(t => t.name).join(' + '),
+      gradeCol,
       st.qty || '',
       st.note || '',
       tiersUsed.map(t => t.cny).join(' / '),
