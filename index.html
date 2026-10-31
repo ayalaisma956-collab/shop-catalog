@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Wholesale Parts Market Survey — Interactive Visual Catalog</title>
+<style>
+  :root {
+    --bg: #0b1120;
+    --card-bg: #172033;
+    --card-hover: #1e293b;
+    --border: #2e3c54;
+    --text: #f8fafc;
+    --muted: #94a3b8;
+    --hot: #10b981;
+    --hot-bg: rgba(16, 185, 129, 0.16);
+    --med: #f59e0b;
+    --med-bg: rgba(245, 158, 11, 0.16);
+    --skip: #ef4444;
+    --skip-bg: rgba(239, 68, 68, 0.14);
+    --accent: #3b82f6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body { background: var(--bg); color: var(--text); padding-bottom: 95px; }
+
+  /* Sticky Top Header */
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(11, 17, 32, 0.96); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border); padding: 12px 16px 10px;
+  }
+  .top-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; max-width: 1340px; margin: 0 auto; }
+  .title-box h1 { font-size: 1.15rem; font-weight: 800; color: #fff; letter-spacing: -0.2px; }
+  .title-box p { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+
+  .controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .btn-ctrl {
+    background: var(--card-bg); color: var(--text); border: 1px solid var(--border);
+    padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600;
+    cursor: pointer; transition: 0.15s; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-ctrl.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-ctrl:hover { border-color: #64748b; }
+
+  /* Category Tabs */
+  .tabs {
+    display: flex; gap: 8px; overflow-x: auto; padding: 10px 0 2px;
+    max-width: 1340px; margin: 0 auto; scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex-shrink: 0; padding: 8px 14px; border-radius: 999px;
+    background: var(--card-bg); border: 1px solid var(--border);
+    color: var(--muted); font-size: 0.82rem; font-weight: 600; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .tab .t-cnt {
+    font-size: 0.72rem; padding: 2px 7px; border-radius: 999px;
+    background: rgba(255,255,255,0.08); color: #cbd5e1;
+  }
+  .tab.active { background: #fff; color: #0f172a; border-color: #fff; }
+  .tab.active .t-cnt { background: #0f172a; color: #fff; }
+
+  /* Search & Filter Bar */
+  .sub-bar {
+    max-width: 1340px; margin: 12px auto 0; padding: 0 16px;
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  }
+  .search-input {
+    flex: 1; min-width: 220px; background: var(--card-bg); border: 1px solid var(--border);
+    color: #fff; padding: 9px 14px; border-radius: 8px; font-size: 0.88rem;
+  }
+  .stats-pills { display: flex; gap: 6px; flex-wrap: wrap; font-size: 0.78rem; font-weight: 700; }
+  .stat-pill {
+    padding: 7px 11px; border-radius: 8px; background: var(--card-bg);
+    border: 1px solid var(--border); cursor: pointer; user-select: none;
+  }
+  .stat-pill.active-filter { outline: 2px solid #fff; }
+  .stat-pill.hot { color: var(--hot); border-color: rgba(16,185,129,0.4); }
+  .stat-pill.med { color: var(--med); border-color: rgba(245,158,11,0.4); }
+  .stat-pill.skip { color: var(--skip); border-color: rgba(239,68,68,0.4); }
+  .stat-pill.unrated { color: #38bdf8; border-color: rgba(56,189,248,0.4); }
+
+  .container { max-width: 1340px; margin: 14px auto; padding: 0 16px; }
+
+  /* Reference Visual Guide Banner */
+  .ref-section {
+    margin-bottom: 16px; background: rgba(30, 41, 59, 0.55); border: 1px dashed #475569;
+    border-radius: 12px; padding: 12px 14px;
+  }
+  .ref-header {
+    display: flex; justify-content: space-between; align-items: center; cursor: pointer;
+    font-size: 0.84rem; font-weight: 700; color: #cbd5e1;
+  }
+  .ref-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 10px; margin-top: 10px;
+  }
+  .ref-section.collapsed .ref-grid { display: none; }
+  .ref-card {
+    display: flex; align-items: center; gap: 10px; background: var(--card-bg);
+    border: 1px solid var(--border); border-radius: 10px; padding: 8px;
+  }
+  .ref-card img {
+    width: 68px; height: 68px; object-fit: contain; background: #fff;
+    border-radius: 6px; padding: 3px; flex-shrink: 0; cursor: zoom-in;
+  }
+  .ref-card h4 { font-size: 0.8rem; color: #fff; margin-bottom: 3px; }
+  .ref-card p { font-size: 0.72rem; color: var(--muted); line-height: 1.3; }
+  body.hide-prices .ref-price-hint { display: none; }
+
+  /* Grid Layout */
+  .grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(305px, 1fr)); gap: 16px;
+  }
+
+  /* Product Card */
+  .card {
+    background: var(--card-bg); border: 2px solid var(--border); border-radius: 14px;
+    overflow: hidden; display: flex; flex-direction: column; transition: border-color 0.15s;
+    position: relative;
+  }
+  .card.status-hot { border-color: var(--hot); background: linear-gradient(180deg, var(--hot-bg) 0%, var(--card-bg) 36%); }
+  .card.status-med { border-color: var(--med); background: linear-gradient(180deg, var(--med-bg) 0%, var(--card-bg) 36%); }
+  .card.status-skip { border-color: var(--skip); opacity: 0.5; }
+
+  .badge-row {
+    position: absolute; top: 8px; left: 8px; right: 8px; z-index: 2;
+    display: flex; justify-content: space-between; pointer-events: none;
+  }
+  .badge {
+    padding: 3px 8px; border-radius: 6px; font-size: 0.68rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.3px;
+  }
+  .badge-brand { background: rgba(15, 23, 42, 0.85); color: #e2e8f0; border: 1px solid #475569; }
+  .badge-new { background: #2563eb; color: #fff; }
+
+  /* Dual Photo Split: Phone + Actual Replacement Part */
+  .dual-img-wrap {
+    display: grid; grid-template-columns: 1fr 1fr; height: 180px; background: #fff;
+    border-bottom: 1px solid var(--border);
+  }
+  .img-half {
+    position: relative; display: flex; align-items: center; justify-content: center;
+    padding: 8px 6px 18px; overflow: hidden; cursor: zoom-in;
+  }
+  .img-half:first-child { border-right: 1px solid #e2e8f0; }
+  .img-half img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .img-caption {
+    position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%);
+    font-size: 0.64rem; font-weight: 700; color: #475569; background: rgba(241,245,249,0.92);
+    padding: 1px 7px; border-radius: 99px; white-space: nowrap;
+  }
+
+  .card-body { padding: 12px 14px 14px; display: flex; flex-direction: column; flex: 1; gap: 9px; }
+  .model-title { font-size: 1.04rem; font-weight: 800; color: #fff; line-height: 1.25; }
+  .model-code { font-size: 0.76rem; color: var(--muted); font-weight: 500; margin-top: 2px; }
+
+  /* Quality / Grade Selector Pills */
+  .tiers-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; font-weight: 700; }
+  .tiers-list { display: flex; flex-direction: column; gap: 5px; margin-top: 4px; }
+  .tier-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 7px 9px; border-radius: 8px; background: rgba(11, 17, 32, 0.65);
+    border: 1px solid var(--border); cursor: pointer; font-size: 0.79rem; user-select: none;
+  }
+  .tier-item.selected {
+    background: rgba(59, 130, 246, 0.22); border-color: var(--accent); color: #fff; font-weight: 600;
+  }
+  .tier-name { display: flex; align-items: center; gap: 7px; }
+  .tier-check {
+    width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid #64748b;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 0.68rem; flex-shrink: 0;
+  }
+  .tier-item.selected .tier-check { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .tier-price { font-size: 0.75rem; color: #38bdf8; font-weight: 700; white-space: nowrap; margin-left: 6px; }
+  body.hide-prices .tier-price { display: none; }
+
+  /* Optional Quick Quantity & Shop Note (appears when rated Hot or Medium) */
+  .extra-box {
+    display: none; flex-direction: column; gap: 6px; padding-top: 4px;
+    border-top: 1px dashed rgba(148,163,184,0.2);
+  }
+  .card.status-hot .extra-box, .card.status-med .extra-box { display: flex; }
+  .qty-row { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+  .qty-lbl { font-size: 0.7rem; color: var(--muted); font-weight: 600; margin-right: 2px; }
+  .qty-pill {
+    padding: 3px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700;
+    background: #0b1120; border: 1px solid var(--border); color: #cbd5e1; cursor: pointer;
+  }
+  .qty-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .note-input {
+    width: 100%; background: rgba(11, 17, 32, 0.7); border: 1px solid var(--border);
+    border-radius: 6px; padding: 5px 8px; color: #fff; font-size: 0.76rem;
+  }
+
+  /* 3 Big Action Buttons */
+  .rate-btns {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: auto; padding-top: 4px;
+  }
+  .r-btn {
+    padding: 10px 4px; border-radius: 8px; border: 1px solid var(--border);
+    background: #0b1120; color: #cbd5e1; font-size: 0.8rem; font-weight: 700;
+    cursor: pointer; text-align: center; transition: 0.12s;
+  }
+  .r-btn.hot.active { background: var(--hot); border-color: var(--hot); color: #052e16; }
+  .r-btn.med.active { background: var(--med); border-color: var(--med); color: #451a03; }
+  .r-btn.skip.active { background: var(--skip); border-color: var(--skip); color: #fff; }
+
+  /* Flashcard Mode */
+  .flashcard-wrap {
+    max-width: 500px; margin: 16px auto; display: none; flex-direction: column; gap: 12px;
+  }
+  body.flashcard-mode .grid, body.flashcard-mode .ref-section { display: none; }
+  body.flashcard-mode .flashcard-wrap { display: flex; }
+  .fc-nav { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 0.9rem; font-weight: 700; }
+
+  /* Bottom Floating Export Bar */
+  .bottom-bar {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(11, 17, 32, 0.96); border-top: 1px solid var(--border);
+    padding: 12px 16px; backdrop-filter: blur(10px);
+  }
+  .bottom-inner { max-width: 1340px; width: 100%; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .progress-text { font-size: 0.84rem; color: #e2e8f0; font-weight: 700; }
+  .export-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn-export {
+    background: var(--hot); color: #052e16; border: none; padding: 10px 16px;
+    border-radius: 8px; font-weight: 800; font-size: 0.84rem; cursor: pointer;
+  }
+  .btn-secondary {
+    background: var(--card-bg); color: #fff; border: 1px solid var(--border);
+    padding: 10px 14px; border-radius: 8px; font-weight: 600; font-size: 0.84rem; cursor: pointer;
+  }
+
+  /* Summary Modal & Image Zoom Lightbox */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 200;
+    display: none; align-items: center; justify-content: center; padding: 16px;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px;
+    max-width: 680px; width: 100%; max-height: 88vh; display: flex; flex-direction: column;
+    padding: 18px; gap: 12px;
+  }
+  .modal textarea {
+    width: 100%; height: 320px; background: #0b1120; color: #e2e8f0;
+    border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 0.81rem;
+  }
+  .zoom-box {
+    background: #fff; padding: 16px; border-radius: 14px; max-width: 92vw; max-height: 86vh;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .zoom-box img { max-width: 85vw; max-height: 72vh; object-fit: contain; }
+  .zoom-caption { color: #0f172a; font-weight: 700; font-size: 0.95rem; text-align: center; }
+</style>
+</head>
+<body class="hide-prices">
+
+<header>
+  <div class="top-row">
+    <div class="title-box">
+      <h1>📱 Mobile Parts Visual Selector (Somalia / Ethiopia Market)</h1>
+      <p>Tap any photo to zoom • Tap 🔥 Fast, 👍 Medium, or ❌ Skip • Tap quality grades that sell</p>
+    </div>
+    <div class="controls">
+      <button class="btn-ctrl" id="btnToggleMode" onclick="toggleMode()">🃏 Flashcard Mode</button>
+      <button class="btn-ctrl" id="btnTogglePrice" onclick="togglePrices()">🔒 Prices Hidden</button>
+      <button class="btn-ctrl" onclick="resetAll()">↺ Reset</button>
+    </div>
+  </div>
+  <div class="tabs" id="catTabs">
+    <button class="tab active" data-cat="all" onclick="setCat('all')">All Models <span class="t-cnt" id="tabCnt_all">0</span></button>
+    <button class="tab" data-cat="iphone_lcd" onclick="setCat('iphone_lcd')">📱 iPhone Screens <span class="t-cnt" id="tabCnt_iphone_lcd">0</span></button>
+    <button class="tab" data-cat="iphone_bat" onclick="setCat('iphone_bat')">🔋 iPhone Batteries <span class="t-cnt" id="tabCnt_iphone_bat">0</span></button>
+    <button class="tab" data-cat="samsung_a" onclick="setCat('samsung_a')">📲 Samsung A-Series <span class="t-cnt" id="tabCnt_samsung_a">0</span></button>
+    <button class="tab" data-cat="samsung_s" onclick="setCat('samsung_s')">🌟 Samsung S-Ultra <span class="t-cnt" id="tabCnt_samsung_s">0</span></button>
+    <button class="tab" data-cat="transsion" onclick="setCat('transsion')">🌍 Tecno / Infinix / itel <span class="t-cnt" id="tabCnt_transsion">0</span></button>
+  </div>
+</header>
+
+<div class="sub-bar">
+  <input type="text" class="search-input" id="searchInput" placeholder="Search model or code (e.g. A12, A225, Spark 8C, iPhone 11, Pop 8, A70)..." oninput="render()">
+  <div class="stats-pills">
+    <span class="stat-pill hot" id="pill_hot" onclick="setStatusFilter('hot')">🔥 Fast: <b id="cntHot">0</b></span>
+    <span class="stat-pill med" id="pill_med" onclick="setStatusFilter('med')">👍 Medium: <b id="cntMed">0</b></span>
+    <span class="stat-pill skip" id="pill_skip" onclick="setStatusFilter('skip')">❌ Skip: <b id="cntSkip">0</b></span>
+    <span class="stat-pill unrated" id="pill_unrated" onclick="setStatusFilter('unrated')">⏳ Unrated: <b id="cntUnrated">0</b></span>
+    <span class="stat-pill" id="pill_all" onclick="setStatusFilter('all')">Show All</span>
+  </div>
+</div>
+
+<div class="container">
+  <div id="refBannerWrap"></div>
+  <div class="grid" id="cardsGrid"></div>
+
+  <div class="flashcard-wrap" id="flashcardWrap">
+    <div class="fc-nav">
+      <button class="btn-ctrl" onclick="prevCard()">⬅ Prev</button>
+      <span id="fcCounter">1 / 1</span>
+      <button class="btn-ctrl" onclick="nextCard()">Next ➡</button>
+    </div>
+    <div id="fcSlot"></div>
+  </div>
+</div>
+
+<div class="bottom-bar">
+  <div class="bottom-inner">
+    <div class="progress-text" id="progressText">Rated: 0 models</div>
+    <div class="export-btns">
+      <button class="btn-secondary" onclick="exportCSV()">📥 Download CSV</button>
+      <button class="btn-export" onclick="openSummaryModal()">✅ View / Copy Selected List</button>
+    </div>
+  </div>
+</div>
+
+<!-- Summary Modal -->
+<div class="modal-backdrop" id="summaryModal" onclick="if(event.target===this)closeSummaryModal()">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+      <h3>📋 Selected Fast & Medium Movers</h3>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <label style="font-size:0.8rem;color:#cbd5e1;cursor:pointer;display:flex;align-items:center;gap:5px;">
+          <input type="checkbox" id="chkExportPrices" onchange="refreshSummaryModal()"> Show Factory Prices (¥/$)
+        </label>
+        <button class="btn-ctrl" onclick="closeSummaryModal()">✕ Close</button>
+      </div>
+    </div>
+    <textarea id="summaryText" readonly></textarea>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+      <button class="btn-secondary" onclick="copySummary()">📋 Copy Text</button>
+      <button class="btn-export" onclick="shareWhatsApp()">📲 Send to WhatsApp</button>
+    </div>
+  </div>
+</div>
+
+<!-- Image Zoom Lightbox -->
+<div class="modal-backdrop" id="zoomModal" onclick="closeZoom()">
+  <div class="zoom-box" onclick="event.stopPropagation()">
+    <img id="zoomImg" src="" alt="">
+    <div class="zoom-caption" id="zoomCap"></div>
+    <button class="btn-ctrl" style="background:#0f172a;color:#fff;" onclick="closeZoom()">✕ Close Photo</button>
+  </div>
+</div>
+
+<script>
+const ITEMS = [{"id": "ip_lcd_x", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone X", "code": "A1865 / A1901", "phone_q": "Apple iPhone X front and back official", "part_q": "iPhone X OLED LCD screen replacement assembly flex", "tiers": [{"name": "JK Incell (FHD)", "cny": "70", "usd": "9.72"}, {"name": "JK Rigid OLED", "cny": "113", "usd": "15.69"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%20X%20front%20and%20back%20official&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%20X%20OLED%20LCD%20screen%20replacement%20assembly%20flex&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_xr", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone XR", "code": "A1984 / A2105", "phone_q": "Apple iPhone XR front and back official", "part_q": "iPhone XR JK Incell LCD screen replacement assembly", "tiers": [{"name": "JK Incell (FHD)", "cny": "70", "usd": "9.72"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%20XR%20front%20and%20back%20official&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%20XR%20JK%20Incell%20LCD%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_xs", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone XS", "code": "A1920 / A2097", "phone_q": "Apple iPhone XS Gold front and back official", "part_q": "iPhone XS OLED LCD screen replacement assembly", "tiers": [{"name": "JK Incell (FHD)", "cny": "70", "usd": "9.72"}, {"name": "JK Rigid OLED", "cny": "113", "usd": "15.69"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%20XS%20Gold%20front%20and%20back%20official&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%20XS%20OLED%20LCD%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_xsmax", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone XS Max", "code": "A1921 / A2101", "phone_q": "Apple iPhone XS Max Gold front and back", "part_q": "iPhone XS Max OLED LCD screen replacement assembly", "tiers": [{"name": "JK Incell", "cny": "75", "usd": "10.42"}, {"name": "DD/SL Rigid OLED", "cny": "143", "usd": "19.86"}, {"name": "JK Flexible OLED (In Stock)", "cny": "165", "usd": "22.92"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%20XS%20Max%20Gold%20front%20and%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%20XS%20Max%20OLED%20LCD%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_11", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone 11", "code": "A2111 / A2221", "phone_q": "Apple iPhone 11 front and back official", "part_q": "iPhone 11 JK Incell LCD screen replacement assembly", "tiers": [{"name": "JK Incell (IC-transferable)", "cny": "70", "usd": "9.72"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2011%20front%20and%20back%20official&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2011%20JK%20Incell%20LCD%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_11pro", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone 11 Pro", "code": "A2160 / A2215", "phone_q": "Apple iPhone 11 Pro Midnight Green front and back", "part_q": "iPhone 11 Pro OLED LCD screen replacement assembly", "tiers": [{"name": "JK Incell (IC version)", "cny": "75", "usd": "10.42"}, {"name": "JK Rigid OLED (IC-transferable)", "cny": "123", "usd": "17.08"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2011%20Pro%20Midnight%20Green%20front%20and%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2011%20Pro%20OLED%20LCD%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_11pm", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone 11 Pro Max", "code": "A2161 / A2218", "phone_q": "Apple iPhone 11 Pro Max Midnight Green front back", "part_q": "iPhone 11 Pro Max OLED LCD screen replacement assembly", "tiers": [{"name": "JK Incell (IC-transferable)", "cny": "80", "usd": "11.11"}, {"name": "DD/SL Rigid OLED (IC-transferable)", "cny": "148", "usd": "20.56"}, {"name": "JK Flexible OLED (In Stock)", "cny": "175", "usd": "24.31"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2011%20Pro%20Max%20Midnight%20Green%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2011%20Pro%20Max%20OLED%20LCD%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_12mini", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone 12 mini", "code": "A2176 / A2399", "phone_q": "Apple iPhone 12 mini blue front and back", "part_q": "iPhone 12 mini LCD OLED screen replacement assembly", "tiers": [{"name": "JK Incell (IC-transferable)", "cny": "138", "usd": "19.17"}, {"name": "DD/SL Rigid OLED (IC-transferable)", "cny": "245", "usd": "34.03"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2012%20mini%20blue%20front%20and%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2012%20mini%20LCD%20OLED%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_12", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone 12 (Universal w/ 12 Pro)", "code": "A2172 / A2403", "phone_q": "Apple iPhone 12 blue front and back official", "part_q": "iPhone 12 12 Pro LCD OLED screen replacement assembly", "tiers": [{"name": "JK12 Pro Incell (Fits 12 & 12 Pro)", "cny": "83", "usd": "11.53"}, {"name": "JK Flexible OLED (IC-transferable)", "cny": "198", "usd": "27.50"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2012%20blue%20front%20and%20back%20official&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2012%2012%20Pro%20LCD%20OLED%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_12pro", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone 12 Pro (Universal w/ 12)", "code": "A2341 / A2407", "phone_q": "Apple iPhone 12 Pro Pacific Blue front and back", "part_q": "iPhone 12 Pro OLED Incell screen replacement assembly", "tiers": [{"name": "JK12 Pro Incell (IC version)", "cny": "83", "usd": "11.53"}, {"name": "JK12 Flexible OLED (Fits 12 & 12 Pro)", "cny": "198", "usd": "27.50"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2012%20Pro%20Pacific%20Blue%20front%20and%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2012%20Pro%20OLED%20Incell%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_12pm", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone 12 Pro Max", "code": "A2342 / A2411", "phone_q": "Apple iPhone 12 Pro Max Gold Pacific Blue front back", "part_q": "iPhone 12 Pro Max OLED LCD screen replacement assembly", "tiers": [{"name": "JK Incell (IC version)", "cny": "125", "usd": "17.36"}, {"name": "DD/SL Rigid OLED (IC-transferable)", "cny": "215", "usd": "29.86"}, {"name": "JK Flexible OLED (IC-transferable)", "cny": "220", "usd": "30.56"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2012%20Pro%20Max%20Gold%20Pacific%20Blue%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2012%20Pro%20Max%20OLED%20LCD%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_13mini", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone 13 mini", "code": "A2481 / A2628", "phone_q": "Apple iPhone 13 mini pink midnight front back", "part_q": "iPhone 13 mini LCD screen replacement assembly", "tiers": [{"name": "JK Incell (IC-transferable)", "cny": "138", "usd": "19.17"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2013%20mini%20pink%20midnight%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2013%20mini%20LCD%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_13", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone 13", "code": "A2482 / A2633", "phone_q": "Apple iPhone 13 pink midnight front and back", "part_q": "iPhone 13 OLED Incell screen replacement assembly", "tiers": [{"name": "JK Incell (IC-transferable)", "cny": "93", "usd": "12.92"}, {"name": "JK Flexible OLED (IC-transferable)", "cny": "204", "usd": "28.33"}, {"name": "DD/SL Flexible OLED (IC-transferable)", "cny": "205", "usd": "28.47"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2013%20pink%20midnight%20front%20and%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2013%20OLED%20Incell%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_13pro", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone 13 Pro", "code": "A2483 / A2638", "phone_q": "Apple iPhone 13 Pro Sierra Blue front and back", "part_q": "iPhone 13 Pro 120Hz OLED screen replacement assembly", "tiers": [{"name": "JK Incell (IC-transferable)", "cny": "110", "usd": "15.28"}, {"name": "JK Flexible OLED (High-refresh)", "cny": "230", "usd": "31.94"}, {"name": "DD/SL Flexible OLED (High-refresh)", "cny": "235", "usd": "32.64"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2013%20Pro%20Sierra%20Blue%20front%20and%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2013%20Pro%20120Hz%20OLED%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_13pm", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone 13 Pro Max", "code": "A2484 / A2643", "phone_q": "Apple iPhone 13 Pro Max Sierra Blue front and back", "part_q": "iPhone 13 Pro Max OLED LCD screen replacement assembly", "tiers": [{"name": "JK Incell (IC-transferable)", "cny": "123", "usd": "17.08"}, {"name": "JK Flexible OLED (High-refresh New)", "cny": "205", "usd": "28.47"}, {"name": "DD/SL Rigid OLED (High-refresh)", "cny": "215", "usd": "29.86"}, {"name": "DD/SL Flexible OLED (High-refresh)", "cny": "230", "usd": "31.94"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2013%20Pro%20Max%20Sierra%20Blue%20front%20and%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2013%20Pro%20Max%20OLED%20LCD%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_14", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone 14", "code": "A2649 / A2882", "phone_q": "Apple iPhone 14 blue purple front and back", "part_q": "iPhone 14 OLED LCD screen replacement assembly", "tiers": [{"name": "JK Incell (IC-transferable)", "cny": "100", "usd": "13.89"}, {"name": "DD/SL Flexible OLED (IC-transferable)", "cny": "205", "usd": "28.47"}, {"name": "JK Flexible OLED (IC-transferable)", "cny": "205", "usd": "28.47"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2014%20blue%20purple%20front%20and%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2014%20OLED%20LCD%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_14plus", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone 14 Plus", "code": "A2632 / A2886", "phone_q": "Apple iPhone 14 Plus yellow blue front and back", "part_q": "iPhone 14 Plus OLED LCD screen replacement assembly", "tiers": [{"name": "JK Incell (IC-transferable)", "cny": "100", "usd": "13.89"}, {"name": "JK OLED (IC-transferable)", "cny": "215", "usd": "29.86"}, {"name": "DD/SL Flexible OLED (IC-transferable)", "cny": "220", "usd": "30.56"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2014%20Plus%20yellow%20blue%20front%20and%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2014%20Plus%20OLED%20LCD%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_14pro", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone 14 Pro", "code": "A2650 / A2890", "phone_q": "Apple iPhone 14 Pro Deep Purple front and back", "part_q": "iPhone 14 Pro OLED LCD screen replacement assembly", "tiers": [{"name": "JK Incell (IC-transferable)", "cny": "122", "usd": "16.94"}, {"name": "JK Rigid OLED (High-refresh)", "cny": "200", "usd": "27.78"}, {"name": "DD/SL Flexible OLED (High-refresh)", "cny": "235", "usd": "32.64"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2014%20Pro%20Deep%20Purple%20front%20and%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2014%20Pro%20OLED%20LCD%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_14pm", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone 14 Pro Max", "code": "A2651 / A2894", "phone_q": "Apple iPhone 14 Pro Max Deep Purple front and back", "part_q": "iPhone 14 Pro Max OLED LCD screen replacement assembly", "tiers": [{"name": "JK Incell (IC-transferable)", "cny": "153", "usd": "21.25"}, {"name": "JK Rigid OLED (High-refresh)", "cny": "190", "usd": "26.39"}, {"name": "JK Flexible OLED (High-refresh New)", "cny": "205", "usd": "28.47"}, {"name": "DD/SL Flexible OLED (High-refresh)", "cny": "230", "usd": "31.94"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2014%20Pro%20Max%20Deep%20Purple%20front%20and%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2014%20Pro%20Max%20OLED%20LCD%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_15", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone 15", "code": "A2846 / A3090", "phone_q": "Apple iPhone 15 pink blue front and back", "part_q": "iPhone 15 OLED Incell screen replacement assembly", "tiers": [{"name": "JK Incell (IC-transferable)", "cny": "110", "usd": "15.28"}, {"name": "JK Rigid OLED (IC-transferable)", "cny": "200", "usd": "27.78"}, {"name": "DD/SL Flexible OLED (IC-transferable)", "cny": "230", "usd": "31.94"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2015%20pink%20blue%20front%20and%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2015%20OLED%20Incell%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_15plus", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone 15 Plus", "code": "A2847 / A3094", "phone_q": "Apple iPhone 15 Plus green blue front and back", "part_q": "iPhone 15 Plus OLED LCD screen replacement assembly", "tiers": [{"name": "JK Incell (IC-transferable)", "cny": "115", "usd": "15.97"}, {"name": "JK Rigid OLED (IC-transferable)", "cny": "215", "usd": "29.86"}, {"name": "JK Flexible OLED (IC-transferable)", "cny": "245", "usd": "34.03"}, {"name": "DD/SL Flexible OLED (IC-transferable)", "cny": "255", "usd": "35.42"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2015%20Plus%20green%20blue%20front%20and%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2015%20Plus%20OLED%20LCD%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_15pro", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone 15 Pro", "code": "A2848 / A3102", "phone_q": "Apple iPhone 15 Pro Natural Titanium front and back", "part_q": "iPhone 15 Pro OLED LCD screen replacement assembly", "tiers": [{"name": "JK Incell (IC-transferable)", "cny": "122", "usd": "16.94"}, {"name": "JK Rigid OLED (High-refresh)", "cny": "200", "usd": "27.78"}, {"name": "DD/SL Flexible OLED (High-refresh)", "cny": "230", "usd": "31.94"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2015%20Pro%20Natural%20Titanium%20front%20and%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2015%20Pro%20OLED%20LCD%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_15pm", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone 15 Pro Max", "code": "A2849 / A3106", "phone_q": "Apple iPhone 15 Pro Max Natural Titanium front back", "part_q": "iPhone 15 Pro Max OLED LCD screen replacement assembly", "tiers": [{"name": "JK Incell (IC-transferable)", "cny": "153", "usd": "21.25"}, {"name": "JK Rigid OLED (High-refresh)", "cny": "190", "usd": "26.39"}, {"name": "JK Flexible OLED (High-refresh New)", "cny": "205", "usd": "28.47"}, {"name": "DD/SL Flexible OLED (High-refresh)", "cny": "230", "usd": "31.94"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2015%20Pro%20Max%20Natural%20Titanium%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2015%20Pro%20Max%20OLED%20LCD%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_16", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone 16", "code": "A3081 / A3287", "phone_q": "Apple iPhone 16 Ultramarine front and back", "part_q": "iPhone 16 OLED LCD screen replacement assembly", "tiers": [{"name": "JK16 Incell (IC-transferable)", "cny": "145", "usd": "20.14"}, {"name": "JK Rigid OLED (IC-transferable)", "cny": "200", "usd": "27.78"}, {"name": "DD/SL Flexible OLED (IC-transferable)", "cny": "230", "usd": "31.94"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2016%20Ultramarine%20front%20and%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2016%20OLED%20LCD%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_16e", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone 16e", "code": "A3212 / A3409", "phone_q": "Apple iPhone 16e black white front and back", "part_q": "iPhone 16e OLED Incell screen replacement assembly", "tiers": [{"name": "JK Incell (IC-transferable)", "cny": "105", "usd": "14.58"}, {"name": "DD/SL Flexible OLED (IC-transferable)", "cny": "220", "usd": "30.56"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2016e%20black%20white%20front%20and%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2016e%20OLED%20Incell%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_16plus", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone 16 Plus", "code": "A3082 / A3290", "phone_q": "Apple iPhone 16 Plus Teal Pink front and back", "part_q": "iPhone 16 Plus OLED LCD screen replacement assembly", "tiers": [{"name": "JK16 Plus Incell (IC-transferable)", "cny": "150", "usd": "20.83"}, {"name": "JK Rigid OLED (IC-transferable)", "cny": "215", "usd": "29.86"}, {"name": "DD/SL Flexible OLED (IC-transferable)", "cny": "255", "usd": "35.42"}, {"name": "JK Flexible OLED (IC-transferable)", "cny": "255", "usd": "35.42"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2016%20Plus%20Teal%20Pink%20front%20and%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2016%20Plus%20OLED%20LCD%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_16pro", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone 16 Pro", "code": "A3083 / A3293", "phone_q": "Apple iPhone 16 Pro Desert Titanium front and back", "part_q": "iPhone 16 Pro OLED Incell screen replacement assembly", "tiers": [{"name": "JK Incell (IC-transferable)", "cny": "210", "usd": "29.17"}, {"name": "DD/SL Rigid OLED (High-refresh)", "cny": "264", "usd": "36.67"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2016%20Pro%20Desert%20Titanium%20front%20and%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2016%20Pro%20OLED%20Incell%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_16pm", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone 16 Pro Max", "code": "A3084 / A3296", "phone_q": "Apple iPhone 16 Pro Max Desert Titanium front back", "part_q": "iPhone 16 Pro Max OLED screen replacement assembly", "tiers": [{"name": "JK Incell (IC-transferable)", "cny": "215", "usd": "29.86"}, {"name": "DD/SL Rigid OLED (High-refresh)", "cny": "265", "usd": "36.81"}, {"name": "JK Flexible OLED (High-refresh New)", "cny": "290", "usd": "40.28"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2016%20Pro%20Max%20Desert%20Titanium%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2016%20Pro%20Max%20OLED%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_17", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone 17", "code": "iPhone 17 Base", "phone_q": "Apple iPhone 17 smartphone official front back", "part_q": "iPhone 17 OLED screen display replacement assembly", "tiers": [{"name": "DD/SL Rigid OLED (IC-transferable New)", "cny": "327", "usd": "45.42"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2017%20smartphone%20official%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2017%20OLED%20screen%20display%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_17pro", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone 17 Pro", "code": "iPhone 17 Pro", "phone_q": "Apple iPhone 17 Pro smartphone official front back", "part_q": "iPhone 17 Pro OLED screen display replacement assembly", "tiers": [{"name": "DD/SL Rigid OLED (High-refresh New)", "cny": "327", "usd": "45.42"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2017%20Pro%20smartphone%20official%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2017%20Pro%20OLED%20screen%20display%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "ip_lcd_17pm", "cat": "iphone_lcd", "brand": "iPhone Screen", "model": "iPhone 17 Pro Max", "code": "iPhone 17 Pro Max", "phone_q": "Apple iPhone 17 Pro Max smartphone official", "part_q": "iPhone 17 Pro Max OLED screen display replacement", "tiers": [{"name": "DD/SL Rigid OLED (High-refresh New)", "cny": "327", "usd": "45.42"}, {"name": "JK Flexible OLED (High-refresh New)", "cny": "490", "usd": "68.06"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2017%20Pro%20Max%20smartphone%20official&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2017%20Pro%20Max%20OLED%20screen%20display%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_6", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 6 Battery", "code": "1810 mAh • High-Copy", "phone_q": "Apple iPhone 6 Space Gray Gold front back", "part_q": "iPhone 6 internal battery replacement 1810mAh", "tiers": [{"name": "Standard High-Copy", "cny": "8.5", "usd": "1.18"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%206%20Space%20Gray%20Gold%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%206%20internal%20battery%20replacement%201810mAh&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_6s", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 6s Battery", "code": "1715 mAh • High-Copy", "phone_q": "Apple iPhone 6s Rose Gold front back", "part_q": "iPhone 6s internal battery replacement 1715mAh", "tiers": [{"name": "Standard High-Copy", "cny": "8.5", "usd": "1.18"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%206s%20Rose%20Gold%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%206s%20internal%20battery%20replacement%201715mAh&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_6p", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 6 Plus Battery", "code": "2915 mAh • High-Copy", "phone_q": "Apple iPhone 6 Plus Silver Gold front back", "part_q": "iPhone 6 Plus internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "10", "usd": "1.39"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%206%20Plus%20Silver%20Gold%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%206%20Plus%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_6sp", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 6s Plus Battery", "code": "2750 mAh • High-Copy", "phone_q": "Apple iPhone 6s Plus Rose Gold front back", "part_q": "iPhone 6s Plus internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "11", "usd": "1.53"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%206s%20Plus%20Rose%20Gold%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%206s%20Plus%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_7", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 7 Battery", "code": "1960 mAh • High-Copy", "phone_q": "Apple iPhone 7 Matte Black front back", "part_q": "iPhone 7 internal battery replacement 1960mAh", "tiers": [{"name": "Standard High-Copy", "cny": "8.5", "usd": "1.18"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%207%20Matte%20Black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%207%20internal%20battery%20replacement%201960mAh&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_7p", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 7 Plus Battery", "code": "2900 mAh • High-Copy", "phone_q": "Apple iPhone 7 Plus Jet Black Red front back", "part_q": "iPhone 7 Plus internal battery replacement 2900mAh", "tiers": [{"name": "Standard High-Copy", "cny": "13", "usd": "1.81"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%207%20Plus%20Jet%20Black%20Red%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%207%20Plus%20internal%20battery%20replacement%202900mAh&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_8", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 8 Battery (Fits SE 2020)", "code": "1821 mAh • High-Copy", "phone_q": "Apple iPhone 8 Gold Space Gray front back", "part_q": "iPhone 8 internal battery replacement 1821mAh", "tiers": [{"name": "Standard High-Copy", "cny": "9", "usd": "1.25"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%208%20Gold%20Space%20Gray%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%208%20internal%20battery%20replacement%201821mAh&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_8p", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 8 Plus Battery", "code": "2691 mAh • High-Copy", "phone_q": "Apple iPhone 8 Plus Gold Red front back", "part_q": "iPhone 8 Plus internal battery replacement 2691mAh", "tiers": [{"name": "Standard High-Copy", "cny": "13", "usd": "1.81"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%208%20Plus%20Gold%20Red%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%208%20Plus%20internal%20battery%20replacement%202691mAh&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_x", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone X Battery", "code": "2716 mAh L-Shape", "phone_q": "Apple iPhone X Silver Space Gray front back", "part_q": "iPhone X L-shape internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "19", "usd": "2.64"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%20X%20Silver%20Space%20Gray%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%20X%20L-shape%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_xr", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone XR Battery", "code": "2942 mAh • High-Copy", "phone_q": "Apple iPhone XR Red Blue Black front back", "part_q": "iPhone XR internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "17", "usd": "2.36"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%20XR%20Red%20Blue%20Black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%20XR%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_xs", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone XS Battery", "code": "2658 mAh L-Shape", "phone_q": "Apple iPhone XS Gold front back", "part_q": "iPhone XS L-shape internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "20", "usd": "2.78"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%20XS%20Gold%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%20XS%20L-shape%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_xsmax", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone XS Max Battery", "code": "3174 mAh L-Shape", "phone_q": "Apple iPhone XS Max Gold front back", "part_q": "iPhone XS Max internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "22", "usd": "3.06"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%20XS%20Max%20Gold%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%20XS%20Max%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_11", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 11 Battery", "code": "3110 mAh • Std & Premium", "phone_q": "Apple iPhone 11 Purple Black Green front back", "part_q": "iPhone 11 internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "18", "usd": "2.50"}, {"name": "Premium (Better Cell & BMS)", "cny": "21", "usd": "2.92"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2011%20Purple%20Black%20Green%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2011%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_11pro", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 11 Pro Battery", "code": "3046 mAh L-Shape", "phone_q": "Apple iPhone 11 Pro Midnight Green front back", "part_q": "iPhone 11 Pro internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "24", "usd": "3.33"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2011%20Pro%20Midnight%20Green%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2011%20Pro%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_11pm", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 11 Pro Max Battery", "code": "3969 mAh L-Shape", "phone_q": "Apple iPhone 11 Pro Max Midnight Green front back", "part_q": "iPhone 11 Pro Max internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "30", "usd": "4.17"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2011%20Pro%20Max%20Midnight%20Green%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2011%20Pro%20Max%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_12mini", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 12 mini Battery", "code": "2227 mAh • High-Copy", "phone_q": "Apple iPhone 12 mini Blue front back", "part_q": "iPhone 12 mini internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "18", "usd": "2.50"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2012%20mini%20Blue%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2012%20mini%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_12", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 12 / 12 Pro Battery", "code": "2815 mAh (Fits 12 & 12 Pro)", "phone_q": "Apple iPhone 12 Pro Pacific Blue front back", "part_q": "iPhone 12 12 Pro internal battery replacement 2815mAh", "tiers": [{"name": "Standard High-Copy", "cny": "19", "usd": "2.64"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2012%20Pro%20Pacific%20Blue%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2012%2012%20Pro%20internal%20battery%20replacement%202815mAh&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_12pm", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 12 Pro Max Battery", "code": "3687 mAh L-Shape", "phone_q": "Apple iPhone 12 Pro Max Gold Blue front back", "part_q": "iPhone 12 Pro Max internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "27", "usd": "3.75"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2012%20Pro%20Max%20Gold%20Blue%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2012%20Pro%20Max%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_13mini", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 13 mini Battery", "code": "2406 mAh • High-Copy", "phone_q": "Apple iPhone 13 mini Pink front back", "part_q": "iPhone 13 mini internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "19", "usd": "2.64"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2013%20mini%20Pink%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2013%20mini%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_13", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 13 Battery", "code": "3227 mAh • Std & Premium", "phone_q": "Apple iPhone 13 Midnight Pink front back", "part_q": "iPhone 13 internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "20", "usd": "2.78"}, {"name": "Premium (Better Cell & BMS)", "cny": "22", "usd": "3.06"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2013%20Midnight%20Pink%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2013%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_13pro", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 13 Pro Battery", "code": "3095 mAh L-Shape", "phone_q": "Apple iPhone 13 Pro Sierra Blue front back", "part_q": "iPhone 13 Pro internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "30", "usd": "4.17"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2013%20Pro%20Sierra%20Blue%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2013%20Pro%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_13pm", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 13 Pro Max Battery", "code": "4352 mAh L-Shape", "phone_q": "Apple iPhone 13 Pro Max Sierra Blue front back", "part_q": "iPhone 13 Pro Max internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "34", "usd": "4.72"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2013%20Pro%20Max%20Sierra%20Blue%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2013%20Pro%20Max%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_14", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 14 Battery", "code": "3279 mAh • High-Copy", "phone_q": "Apple iPhone 14 Blue Purple front back", "part_q": "iPhone 14 internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "26", "usd": "3.61"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2014%20Blue%20Purple%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2014%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_14plus", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 14 Plus Battery", "code": "4325 mAh • High-Copy", "phone_q": "Apple iPhone 14 Plus Blue Yellow front back", "part_q": "iPhone 14 Plus internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "29", "usd": "4.03"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2014%20Plus%20Blue%20Yellow%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2014%20Plus%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_14pro", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 14 Pro Battery", "code": "3200 mAh L-Shape", "phone_q": "Apple iPhone 14 Pro Deep Purple front back", "part_q": "iPhone 14 Pro internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "32", "usd": "4.44"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2014%20Pro%20Deep%20Purple%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2014%20Pro%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_14pm", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 14 Pro Max Battery", "code": "4323 mAh L-Shape", "phone_q": "Apple iPhone 14 Pro Max Deep Purple front back", "part_q": "iPhone 14 Pro Max internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "37", "usd": "5.14"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2014%20Pro%20Max%20Deep%20Purple%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2014%20Pro%20Max%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_15", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 15 Battery", "code": "3349 mAh • High-Copy", "phone_q": "Apple iPhone 15 Pink Blue front back", "part_q": "iPhone 15 internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "27", "usd": "3.75"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2015%20Pink%20Blue%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2015%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_15plus", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 15 Plus Battery", "code": "4383 mAh • High-Copy", "phone_q": "Apple iPhone 15 Plus Green Blue front back", "part_q": "iPhone 15 Plus internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "30", "usd": "4.17"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2015%20Plus%20Green%20Blue%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2015%20Plus%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_15pro", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 15 Pro Battery", "code": "3274 mAh L-Shape", "phone_q": "Apple iPhone 15 Pro Natural Titanium front back", "part_q": "iPhone 15 Pro internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "34", "usd": "4.72"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2015%20Pro%20Natural%20Titanium%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2015%20Pro%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_15pm", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 15 Pro Max Battery", "code": "4422 mAh L-Shape", "phone_q": "Apple iPhone 15 Pro Max Natural Titanium front back", "part_q": "iPhone 15 Pro Max internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "40", "usd": "5.56"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2015%20Pro%20Max%20Natural%20Titanium%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2015%20Pro%20Max%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_16", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 16 Battery", "code": "3561 mAh • High-Copy", "phone_q": "Apple iPhone 16 Ultramarine front back", "part_q": "iPhone 16 internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "28", "usd": "3.89"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2016%20Ultramarine%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2016%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_16plus", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 16 Plus Battery", "code": "4674 mAh • High-Copy", "phone_q": "Apple iPhone 16 Plus Teal Pink front back", "part_q": "iPhone 16 Plus internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "34", "usd": "4.72"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2016%20Plus%20Teal%20Pink%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2016%20Plus%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_16pro", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 16 Pro Battery", "code": "3582 mAh Metal Case", "phone_q": "Apple iPhone 16 Pro Desert Titanium front back", "part_q": "iPhone 16 Pro internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "38", "usd": "5.28"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2016%20Pro%20Desert%20Titanium%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2016%20Pro%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_16pm", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 16 Pro Max Battery", "code": "4685 mAh • High-Copy", "phone_q": "Apple iPhone 16 Pro Max Desert Titanium front back", "part_q": "iPhone 16 Pro Max internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "41", "usd": "5.69"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2016%20Pro%20Max%20Desert%20Titanium%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2016%20Pro%20Max%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_17", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 17 Battery", "code": "Newest Gen • High-Copy", "phone_q": "Apple iPhone 17 smartphone official", "part_q": "iPhone 16 17 internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "70", "usd": "9.72"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2017%20smartphone%20official&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2016%2017%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_17pro", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 17 Pro Battery", "code": "Newest Gen • High-Copy", "phone_q": "Apple iPhone 17 Pro smartphone official", "part_q": "iPhone 16 Pro 17 Pro metal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "115", "usd": "15.97"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2017%20Pro%20smartphone%20official&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2016%20Pro%2017%20Pro%20metal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "bat_17pm", "cat": "iphone_bat", "brand": "iPhone Battery", "model": "iPhone 17 Pro Max Battery", "code": "Newest Gen • High-Copy", "phone_q": "Apple iPhone 17 Pro Max smartphone official", "part_q": "iPhone 16 Pro Max 17 Pro Max internal battery replacement", "tiers": [{"name": "Standard High-Copy", "cny": "120", "usd": "16.67"}], "phone_img": "https://tse2.mm.bing.net/th?q=Apple%20iPhone%2017%20Pro%20Max%20smartphone%20official&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=iPhone%2016%20Pro%20Max%2017%20Pro%20Max%20internal%20battery%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a03", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A03", "code": "SM-A035F", "is_new": true, "phone_q": "Samsung Galaxy A03 SM-A035F black blue front back", "part_q": "Samsung Galaxy A03 A035 LCD screen replacement assembly", "tiers": [{"name": "With Frame (China Frame)", "cny": "Pending", "usd": "Pending"}, {"name": "No Frame (Best Quality)", "cny": "Pending", "usd": "Pending"}, {"name": "No Frame (China Quality)", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A03%20SM-A035F%20black%20blue%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A03%20A035%20LCD%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a03s", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A03s", "code": "SM-A037F", "is_new": true, "phone_q": "Samsung Galaxy A03s SM-A037F blue black front back", "part_q": "Samsung Galaxy A03s A037 LCD screen replacement with frame", "tiers": [{"name": "With Frame (China Frame)", "cny": "Pending", "usd": "Pending"}, {"name": "No Frame (Best Quality)", "cny": "Pending", "usd": "Pending"}, {"name": "No Frame (China Quality)", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A03s%20SM-A037F%20blue%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A03s%20A037%20LCD%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a03core", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A03 Core", "code": "SM-A032F", "is_new": true, "phone_q": "Samsung Galaxy A03 Core SM-A032F blue black front back", "part_q": "Samsung Galaxy A03 Core A032 LCD screen replacement", "tiers": [{"name": "With Frame (China Frame)", "cny": "Pending", "usd": "Pending"}, {"name": "No Frame (Best Quality)", "cny": "Pending", "usd": "Pending"}, {"name": "No Frame (China Quality)", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A03%20Core%20SM-A032F%20blue%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A03%20Core%20A032%20LCD%20screen%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a04", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A04", "code": "SM-A045F", "phone_q": "Samsung Galaxy A04 SM-A045F green black front back", "part_q": "Samsung Galaxy A04 A045 LCD screen replacement with frame", "tiers": [{"name": "With Frame (Machine Assembled)", "cny": "50", "usd": "6.94"}, {"name": "No Frame (Best Quality)", "cny": "43", "usd": "5.97"}, {"name": "No Frame (China Quality)", "cny": "33", "usd": "4.58"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A04%20SM-A045F%20green%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A04%20A045%20LCD%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a04e", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A04e", "code": "SM-A042F", "is_new": true, "phone_q": "Samsung Galaxy A04e SM-A042F light blue copper front back", "part_q": "Samsung Galaxy A04e A042 LCD screen replacement with frame", "tiers": [{"name": "With Frame (China Frame)", "cny": "Pending", "usd": "Pending"}, {"name": "No Frame (Best Quality)", "cny": "Pending", "usd": "Pending"}, {"name": "No Frame (China Quality)", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A04e%20SM-A042F%20light%20blue%20copper%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A04e%20A042%20LCD%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a04s", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A04s", "code": "SM-A047F", "is_new": true, "phone_q": "Samsung Galaxy A04s SM-A047F green black front back", "part_q": "Samsung Galaxy A04s A047 LCD screen replacement with frame", "tiers": [{"name": "With Frame (China Frame)", "cny": "Pending", "usd": "Pending"}, {"name": "No Frame (Best Quality)", "cny": "Pending", "usd": "Pending"}, {"name": "No Frame (China Quality)", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A04s%20SM-A047F%20green%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A04s%20A047%20LCD%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a05", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A05", "code": "SM-A055F", "phone_q": "Samsung Galaxy A05 SM-A055F silver green black front back", "part_q": "Samsung Galaxy A05 A055 LCD screen replacement with frame", "tiers": [{"name": "With Frame (Machine Assembled)", "cny": "50", "usd": "6.94"}, {"name": "No Frame (Best Quality)", "cny": "38", "usd": "5.28"}, {"name": "No Frame (China Quality)", "cny": "35", "usd": "4.86"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A05%20SM-A055F%20silver%20green%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A05%20A055%20LCD%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a06", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A06", "code": "SM-A065F", "phone_q": "Samsung Galaxy A06 SM-A065F light blue black front back", "part_q": "Samsung Galaxy A06 A065 LCD screen replacement with frame", "tiers": [{"name": "With Frame (Machine Assembled)", "cny": "50", "usd": "6.94"}, {"name": "No Frame (Best Quality)", "cny": "38", "usd": "5.28"}, {"name": "No Frame (China Quality)", "cny": "35", "usd": "4.86"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A06%20SM-A065F%20light%20blue%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A06%20A065%20LCD%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a07", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A07", "code": "SM-A075", "phone_q": "Samsung Galaxy A07 smartphone front back", "part_q": "Samsung Galaxy A06 A07 LCD screen replacement with frame", "tiers": [{"name": "With Frame (Machine Assembled)", "cny": "55", "usd": "7.64"}, {"name": "No Frame (Best Quality)", "cny": "45", "usd": "6.25"}, {"name": "No Frame (China Quality)", "cny": "37", "usd": "5.14"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A07%20smartphone%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A06%20A07%20LCD%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a10s", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A10s", "code": "SM-A107F", "is_new": true, "phone_q": "Samsung Galaxy A10s SM-A107F blue red black front back", "part_q": "Samsung Galaxy A10s A107 LCD screen replacement with frame", "tiers": [{"name": "With Frame", "cny": "Pending", "usd": "Pending"}, {"name": "No Frame (Best Quality)", "cny": "Pending", "usd": "Pending"}, {"name": "No Frame (China Quality)", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A10s%20SM-A107F%20blue%20red%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A10s%20A107%20LCD%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a11", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A11", "code": "SM-A115F", "is_new": true, "phone_q": "Samsung Galaxy A11 SM-A115F blue black white front back", "part_q": "Samsung Galaxy A11 A115 LCD screen replacement with frame", "tiers": [{"name": "With Frame", "cny": "Pending", "usd": "Pending"}, {"name": "No Frame (Best Quality)", "cny": "Pending", "usd": "Pending"}, {"name": "No Frame (China Quality)", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A11%20SM-A115F%20blue%20black%20white%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A11%20A115%20LCD%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a12", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A12 (Universal M12 / F12)", "code": "SM-A125F / A127F", "is_new": true, "phone_q": "Samsung Galaxy A12 blue black front and back official", "part_q": "Samsung Galaxy A12 A125 A127 LCD screen replacement with frame", "tiers": [{"name": "With Frame (China Frame)", "cny": "Pending", "usd": "Pending"}, {"name": "No Frame (Best Quality)", "cny": "Pending", "usd": "Pending"}, {"name": "No Frame (China Quality)", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A12%20blue%20black%20front%20and%20back%20official&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A12%20A125%20A127%20LCD%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a13", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A13 4G", "code": "SM-A135F / A137F (Std & 5.7\" ver)", "phone_q": "Samsung Galaxy A13 4G blue black front and back", "part_q": "Samsung Galaxy A13 A135 LCD screen replacement with frame", "tiers": [{"name": "With Frame (Machine Assembled)", "cny": "50", "usd": "6.94"}, {"name": "No Frame Flex (Best Quality)", "cny": "45", "usd": "6.25"}, {"name": "No Frame Flex (China Quality)", "cny": "37", "usd": "5.14"}, {"name": "No Frame 5.7\" Ver. (Best / China)", "cny": "40 / 35", "usd": "5.56 / 4.86"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A13%204G%20blue%20black%20front%20and%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A13%20A135%20LCD%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a14_4g", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A14 4G", "code": "SM-A145F", "is_new": true, "phone_q": "Samsung Galaxy A14 4G silver green black front back", "part_q": "Samsung Galaxy A14 4G A145 LCD screen replacement with frame", "tiers": [{"name": "With Frame", "cny": "Pending", "usd": "Pending"}, {"name": "No Frame (Best Quality)", "cny": "Pending", "usd": "Pending"}, {"name": "No Frame (China Quality)", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A14%204G%20silver%20green%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A14%204G%20A145%20LCD%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a14_5g", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A14 5G", "code": "SM-A146B / A146P", "is_new": true, "phone_q": "Samsung Galaxy A14 5G dark red black front back", "part_q": "Samsung Galaxy A14 5G A146 LCD screen replacement with frame", "tiers": [{"name": "With Frame", "cny": "Pending", "usd": "Pending"}, {"name": "No Frame (Best Quality)", "cny": "Pending", "usd": "Pending"}, {"name": "No Frame (China Quality)", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A14%205G%20dark%20red%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A14%205G%20A146%20LCD%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a15", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A15 (4G / 5G)", "code": "SM-A155F / A156B", "phone_q": "Samsung Galaxy A15 blue yellow front and back", "part_q": "Samsung Galaxy A15 A155 OLED TFT screen replacement with frame", "tiers": [{"name": "Incell / TFT Copy With Frame (Added)", "cny": "Pending", "usd": "Pending"}, {"name": "China OLED Copy With Frame (Added)", "cny": "Pending", "usd": "Pending"}, {"name": "Orig Used LCD + Orig Frame (Laminated)", "cny": "190", "usd": "26.39"}, {"name": "Service Pack / 100% New Original", "cny": "235", "usd": "32.64"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A15%20blue%20yellow%20front%20and%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A15%20A155%20OLED%20TFT%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a16_4g", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A16 4G", "code": "SM-A165F", "phone_q": "Samsung Galaxy A16 4G light green black front back", "part_q": "Samsung Galaxy A16 A165 screen replacement with frame", "tiers": [{"name": "Incell / TFT Copy With Frame (Added)", "cny": "Pending", "usd": "Pending"}, {"name": "China OLED Copy With Frame (Added)", "cny": "Pending", "usd": "Pending"}, {"name": "Orig LCD + Orig Frame (Machine)", "cny": "245", "usd": "34.03"}, {"name": "Service Pack (Sealed Box)", "cny": "260", "usd": "36.11"}, {"name": "100% New Orig With Frame / Bare", "cny": "280 / 285", "usd": "38.89 / 39.58"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A16%204G%20light%20green%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A16%20A165%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a16_5g", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A16 5G & A16 Plus", "code": "SM-A166B / A166P", "phone_q": "Samsung Galaxy A16 5G blue black gold front back", "part_q": "Samsung Galaxy A16 5G A166 screen replacement assembly", "tiers": [{"name": "A166 Orig LCD + Frame (Machine)", "cny": "245", "usd": "34.03"}, {"name": "A166P Plus Machine Assembly", "cny": "255", "usd": "35.42"}, {"name": "A166 Service Pack / 100% New Framed", "cny": "260", "usd": "36.11"}, {"name": "A166 100% Bare LCD", "cny": "295", "usd": "40.97"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A16%205G%20blue%20black%20gold%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A16%205G%20A166%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a17", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A17 (4G & 5G)", "code": "A17 4G / 5G", "phone_q": "Samsung Galaxy A17 smartphone front back", "part_q": "Samsung Galaxy A16 A17 AMOLED screen replacement with frame", "tiers": [{"name": "100% New Original With Frame (5G)", "cny": "265", "usd": "36.81"}, {"name": "100% New Original With Frame (4G)", "cny": "285", "usd": "39.58"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A17%20smartphone%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A16%20A17%20AMOLED%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a20s", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A20s", "code": "SM-A207F", "is_new": true, "phone_q": "Samsung Galaxy A20s SM-A207F blue red black front back", "part_q": "Samsung Galaxy A20s A207 LCD screen replacement with frame", "tiers": [{"name": "With Frame", "cny": "Pending", "usd": "Pending"}, {"name": "No Frame (Best Quality)", "cny": "Pending", "usd": "Pending"}, {"name": "No Frame (China Quality)", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A20s%20SM-A207F%20blue%20red%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A20s%20A207%20LCD%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a21s", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A21s", "code": "SM-A217F", "is_new": true, "phone_q": "Samsung Galaxy A21s SM-A217F blue black white front back", "part_q": "Samsung Galaxy A21s A217 LCD screen replacement with frame", "tiers": [{"name": "With Frame", "cny": "Pending", "usd": "Pending"}, {"name": "No Frame (Best Quality)", "cny": "Pending", "usd": "Pending"}, {"name": "No Frame (China Quality)", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A21s%20SM-A217F%20blue%20black%20white%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A21s%20A217%20LCD%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a22_4g", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A22 4G (AMOLED Model)", "code": "SM-A225F", "phone_q": "Samsung Galaxy A22 4G SM-A225F mint violet black front back", "part_q": "Samsung Galaxy A22 4G A225 OLED TFT screen replacement frame", "tiers": [{"name": "Incell / TFT Copy With Frame (Added)", "cny": "Pending", "usd": "Pending"}, {"name": "100% Bare LCD (A225)", "cny": "128", "usd": "17.78"}, {"name": "Complete Assembled Unit With Frame", "cny": "145", "usd": "20.14"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A22%204G%20SM-A225F%20mint%20violet%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A22%204G%20A225%20OLED%20TFT%20screen%20replacement%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a22_5g", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A22 5G (LCD Model)", "code": "SM-A226B", "phone_q": "Samsung Galaxy A22 5G SM-A226B gray mint front back", "part_q": "Samsung Galaxy A22 5G A226 LCD screen replacement with frame", "tiers": [{"name": "With Frame (A226 5G)", "cny": "53", "usd": "7.36"}, {"name": "No Frame (Best Quality)", "cny": "46", "usd": "6.39"}, {"name": "No Frame (China Quality)", "cny": "36", "usd": "5.00"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A22%205G%20SM-A226B%20gray%20mint%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A22%205G%20A226%20LCD%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a23", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A23 (4G & 5G)", "code": "SM-A235F / A236B", "phone_q": "Samsung Galaxy A23 peach blue black front back", "part_q": "Samsung Galaxy A23 A235 A236 LCD screen replacement with frame", "tiers": [{"name": "With Frame (4G)", "cny": "53", "usd": "7.36"}, {"name": "With Frame (5G)", "cny": "55", "usd": "7.64"}, {"name": "No Frame (Best Quality)", "cny": "46", "usd": "6.39"}, {"name": "No Frame (China Quality)", "cny": "36", "usd": "5.00"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A23%20peach%20blue%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A23%20A235%20A236%20LCD%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a24", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A24 4G", "code": "SM-A245F", "phone_q": "Samsung Galaxy A24 lime green black front back", "part_q": "Samsung Galaxy A24 A245 OLED TFT screen replacement with frame", "tiers": [{"name": "Incell / TFT Copy With Frame (Added)", "cny": "Pending", "usd": "Pending"}, {"name": "China OLED Copy With Frame (Added)", "cny": "Pending", "usd": "Pending"}, {"name": "100% New Original With Frame", "cny": "295", "usd": "40.97"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A24%20lime%20green%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A24%20A245%20OLED%20TFT%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a32_4g", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A32 4G", "code": "SM-A325F", "is_new": true, "phone_q": "Samsung Galaxy A32 4G SM-A325F awesome blue black front back", "part_q": "Samsung Galaxy A32 4G A325 OLED TFT screen replacement frame", "tiers": [{"name": "Incell / TFT Copy With Frame", "cny": "Pending", "usd": "Pending"}, {"name": "China OLED Copy With Frame", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A32%204G%20SM-A325F%20awesome%20blue%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A32%204G%20A325%20OLED%20TFT%20screen%20replacement%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a33_m336", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy M33 / A33 (M336 LCD)", "code": "SM-M336B", "phone_q": "Samsung Galaxy M33 5G SM-M336B green blue front back", "part_q": "Samsung Galaxy M33 M336 LCD screen replacement with frame", "tiers": [{"name": "With Frame Assembly (M336)", "cny": "55", "usd": "7.64"}, {"name": "No Frame Best Quality (CSOT Panel)", "cny": "46", "usd": "6.39"}, {"name": "No Frame China Quality", "cny": "37", "usd": "5.14"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20M33%205G%20SM-M336B%20green%20blue%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20M33%20M336%20LCD%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a50", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A50", "code": "SM-A505F", "is_new": true, "phone_q": "Samsung Galaxy A50 SM-A505F blue black white front back", "part_q": "Samsung Galaxy A50 A505 OLED Incell screen replacement with frame", "tiers": [{"name": "Incell / TFT Copy With Frame", "cny": "Pending", "usd": "Pending"}, {"name": "China OLED Copy With Frame", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A50%20SM-A505F%20blue%20black%20white%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A50%20A505%20OLED%20Incell%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a51", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A51", "code": "SM-A515F", "is_new": true, "phone_q": "Samsung Galaxy A51 SM-A515F prism crush blue black front back", "part_q": "Samsung Galaxy A51 A515 OLED Incell screen replacement with frame", "tiers": [{"name": "Incell / TFT Copy With Frame", "cny": "Pending", "usd": "Pending"}, {"name": "China OLED Copy With Frame", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A51%20SM-A515F%20prism%20crush%20blue%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A51%20A515%20OLED%20Incell%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_a52", "cat": "samsung_a", "brand": "Samsung A-Series", "model": "Galaxy A52 (4G / 5G)", "code": "SM-A525F / A526B", "is_new": true, "phone_q": "Samsung Galaxy A52 awesome blue black violet front back", "part_q": "Samsung Galaxy A52 A525 OLED TFT screen replacement with frame", "tiers": [{"name": "Incell / TFT Copy With Frame", "cny": "Pending", "usd": "Pending"}, {"name": "China OLED Copy With Frame", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A52%20awesome%20blue%20black%20violet%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A52%20A525%20OLED%20TFT%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_s22u", "cat": "samsung_s", "brand": "Samsung Ultra", "model": "Galaxy S22 Ultra", "code": "SM-S908", "phone_q": "Samsung Galaxy S22 Ultra Burgundy Black front back", "part_q": "Samsung Galaxy S22 Ultra S908 OLED screen replacement with frame", "tiers": [{"name": "No Frame 100% S22U/S908", "cny": "1080", "usd": "150.00"}, {"name": "No Frame 100% S908 Bare LCD", "cny": "1165", "usd": "161.81"}, {"name": "With Frame Assy (Burgundy)", "cny": "1110", "usd": "154.17"}, {"name": "With Frame Assy (Black) / 100% New Orig", "cny": "1220", "usd": "169.44"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20S22%20Ultra%20Burgundy%20Black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20S22%20Ultra%20S908%20OLED%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_s23u", "cat": "samsung_s", "brand": "Samsung Ultra", "model": "Galaxy S23 Ultra", "code": "SM-S918", "phone_q": "Samsung Galaxy S23 Ultra Green Black Cream front back", "part_q": "Samsung Galaxy S23 Ultra S918 OLED screen replacement with frame", "tiers": [{"name": "No Frame S918 Bare LCD", "cny": "950", "usd": "131.94"}, {"name": "No Frame 100% S23U/S918", "cny": "1155", "usd": "160.42"}, {"name": "With Frame Assy (Machine Laminated)", "cny": "1330", "usd": "184.72"}, {"name": "100% New Orig With Frame (Green / Black)", "cny": "1400 / 1420", "usd": "194.44 / 197.22"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20S23%20Ultra%20Green%20Black%20Cream%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20S23%20Ultra%20S918%20OLED%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_s24u", "cat": "samsung_s", "brand": "Samsung Ultra", "model": "Galaxy S24 Ultra", "code": "SM-S928", "phone_q": "Samsung Galaxy S24 Ultra Titanium Gray Black front back", "part_q": "Samsung Galaxy S24 Ultra S928 OLED screen replacement with frame", "tiers": [{"name": "No Frame S928 Bare LCD", "cny": "1030", "usd": "143.06"}, {"name": "No Frame 100% S24U/S928", "cny": "1050", "usd": "145.83"}, {"name": "With Frame Assy (Black)", "cny": "1200", "usd": "166.67"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20S24%20Ultra%20Titanium%20Gray%20Black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20S24%20Ultra%20S928%20OLED%20screen%20replacement%20with%20frame&w=300&h=280&c=7&rs=1&p=0"}, {"id": "sam_s25u", "cat": "samsung_s", "brand": "Samsung Ultra", "model": "Galaxy S25 Ultra", "code": "SM-S938", "phone_q": "Samsung Galaxy S25 Ultra Titanium smartphone front back", "part_q": "Samsung Galaxy S25 Ultra S938 screen replacement assembly", "tiers": [{"name": "No Frame S938 Bare LCD", "cny": "900", "usd": "125.00"}, {"name": "No Frame 100% S25U/S938", "cny": "960", "usd": "133.33"}, {"name": "With Frame Assembly", "cny": "1110", "usd": "154.17"}], "phone_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20S25%20Ultra%20Titanium%20smartphone%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20S25%20Ultra%20S938%20screen%20replacement%20assembly&w=300&h=280&c=7&rs=1&p=0"}, {"id": "tec_pop5", "cat": "transsion", "brand": "Tecno", "model": "Tecno Pop 5 / Pop 5 Lite", "code": "BD2 / BD4 • Universal w/ Smart 6", "is_new": true, "phone_q": "Tecno Pop 5 BD2 ice blue black front back", "part_q": "Tecno Pop 5 BD2 LCD screen display touch digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Tecno%20Pop%205%20BD2%20ice%20blue%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Tecno%20Pop%205%20BD2%20LCD%20screen%20display%20touch%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "tec_pop6", "cat": "transsion", "brand": "Tecno", "model": "Tecno Pop 6", "code": "BE7", "is_new": true, "phone_q": "Tecno Pop 6 BE7 sea blue lime green front back", "part_q": "Tecno Pop 6 BE7 LCD screen display digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Tecno%20Pop%206%20BE7%20sea%20blue%20lime%20green%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Tecno%20Pop%206%20BE7%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "tec_pop7", "cat": "transsion", "brand": "Tecno", "model": "Tecno Pop 7", "code": "BF6 • Universal w/ Smart 7 / A60", "is_new": true, "phone_q": "Tecno Pop 7 BF6 blue black front back", "part_q": "Tecno Pop 7 BF6 LCD screen display digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Tecno%20Pop%207%20BF6%20blue%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Tecno%20Pop%207%20BF6%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "tec_pop8", "cat": "transsion", "brand": "Tecno", "model": "Tecno Pop 8", "code": "BG6 • Universal w/ Spark 20 / Smart 8 / A70", "is_new": true, "phone_q": "Tecno Pop 8 BG6 gold black green front back", "part_q": "Tecno Pop 8 BG6 LCD screen display digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Tecno%20Pop%208%20BG6%20gold%20black%20green%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Tecno%20Pop%208%20BG6%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "tec_pop9", "cat": "transsion", "brand": "Tecno", "model": "Tecno Pop 9", "code": "KL4", "is_new": true, "phone_q": "Tecno Pop 9 smartphone black gold white front back", "part_q": "Tecno Pop 8 Pop 9 LCD screen display replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Tecno%20Pop%209%20smartphone%20black%20gold%20white%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Tecno%20Pop%208%20Pop%209%20LCD%20screen%20display%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "tec_spark7", "cat": "transsion", "brand": "Tecno", "model": "Tecno Spark 7", "code": "KF6", "is_new": true, "phone_q": "Tecno Spark 7 KF6 green blue black front back", "part_q": "Tecno Spark 7 KF6 LCD screen display digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Tecno%20Spark%207%20KF6%20green%20blue%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Tecno%20Spark%207%20KF6%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "tec_spark8", "cat": "transsion", "brand": "Tecno", "model": "Tecno Spark 8", "code": "KG6", "is_new": true, "phone_q": "Tecno Spark 8 KG6 turquoise blue black front back", "part_q": "Tecno Spark 8 KG6 LCD screen display digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Tecno%20Spark%208%20KG6%20turquoise%20blue%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Tecno%20Spark%208%20KG6%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "tec_spark8c", "cat": "transsion", "brand": "Tecno", "model": "Tecno Spark 8C", "code": "KG5k • Huge Volume in Ethiopia/Somalia", "is_new": true, "phone_q": "Tecno Spark 8C KG5k turquoise cyan black front back", "part_q": "Tecno Spark 8C KG5k LCD screen display digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Tecno%20Spark%208C%20KG5k%20turquoise%20cyan%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Tecno%20Spark%208C%20KG5k%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "tec_spark9", "cat": "transsion", "brand": "Tecno", "model": "Tecno Spark 9", "code": "KG5p", "is_new": true, "phone_q": "Tecno Spark 9 KG5p sky mirror black front back", "part_q": "Tecno Spark 9 KG5p LCD screen display digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Tecno%20Spark%209%20KG5p%20sky%20mirror%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Tecno%20Spark%209%20KG5p%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "tec_spark10", "cat": "transsion", "brand": "Tecno", "model": "Tecno Spark 10", "code": "KI5q • Universal w/ Spark 10C", "is_new": true, "phone_q": "Tecno Spark 10 KI5q orange black blue front back", "part_q": "Tecno Spark 10 KI5q LCD screen display digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Tecno%20Spark%2010%20KI5q%20orange%20black%20blue%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Tecno%20Spark%2010%20KI5q%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "tec_spark10c", "cat": "transsion", "brand": "Tecno", "model": "Tecno Spark 10C", "code": "KI5k • Huge Volume in Ethiopia/Somalia", "is_new": true, "phone_q": "Tecno Spark 10C KI5k blue green black front back", "part_q": "Tecno Spark 10C KI5k LCD screen display digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Tecno%20Spark%2010C%20KI5k%20blue%20green%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Tecno%20Spark%2010C%20KI5k%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "tec_spark20", "cat": "transsion", "brand": "Tecno", "model": "Tecno Spark 20", "code": "KJ5", "phone_q": "Tecno Spark 20 KJ5 gold black white front back", "part_q": "Tecno Spark 20 KJ5 LCD screen display digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "31", "usd": "4.31"}], "phone_img": "https://tse2.mm.bing.net/th?q=Tecno%20Spark%2020%20KJ5%20gold%20black%20white%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Tecno%20Spark%2020%20KJ5%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "tec_spark30", "cat": "transsion", "brand": "Tecno", "model": "Tecno Spark 30 & 30S", "code": "KL6", "phone_q": "Tecno Spark 30 KL6 white black gold front back", "part_q": "Tecno Spark 30 LCD screen display digitizer replacement", "tiers": [{"name": "Spark 30 Complete Assembly", "cny": "37", "usd": "5.14"}, {"name": "Spark 30S Complete Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Tecno%20Spark%2030%20KL6%20white%20black%20gold%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Tecno%20Spark%2030%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "tec_spark40", "cat": "transsion", "brand": "Tecno", "model": "Tecno Spark 40 & 40S", "code": "Spark 40 Series", "phone_q": "Tecno Spark 40 smartphone front back", "part_q": "Tecno Spark 30 Spark 40 LCD screen display replacement", "tiers": [{"name": "Spark 40 Complete Assembly", "cny": "31.5", "usd": "4.38"}, {"name": "Spark 40S Complete Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Tecno%20Spark%2040%20smartphone%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Tecno%20Spark%2030%20Spark%2040%20LCD%20screen%20display%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "tec_camon20", "cat": "transsion", "brand": "Tecno", "model": "Tecno Camon 20 / 20S / 20 Pro", "code": "CK6 / CK7n (AMOLED)", "phone_q": "Tecno Camon 20 Pro blue black front and back", "part_q": "Tecno Camon 20 CK6 OLED TFT screen display replacement", "tiers": [{"name": "Camon 20 Complete Assembly", "cny": "128", "usd": "17.78"}, {"name": "Camon 20S Complete Assembly", "cny": "128", "usd": "17.78"}, {"name": "Camon 20 Pro Complete Assembly", "cny": "128", "usd": "17.78"}], "phone_img": "https://tse2.mm.bing.net/th?q=Tecno%20Camon%2020%20Pro%20blue%20black%20front%20and%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Tecno%20Camon%2020%20CK6%20OLED%20TFT%20screen%20display%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "tec_camon30", "cat": "transsion", "brand": "Tecno", "model": "Tecno Camon 30 / 30S / 30 Pro", "code": "CL6 / CL7 (Verify AMOLED/TFT)", "phone_q": "Tecno Camon 30 Pro basaltic dark silver front back", "part_q": "Tecno Camon 30 CL6 screen display replacement", "tiers": [{"name": "Camon 30 Complete Assembly", "cny": "145", "usd": "20.14"}, {"name": "Camon 30S Complete Assembly", "cny": "148", "usd": "20.56"}, {"name": "Camon 30 Pro Complete Assembly", "cny": "145", "usd": "20.14"}], "phone_img": "https://tse2.mm.bing.net/th?q=Tecno%20Camon%2030%20Pro%20basaltic%20dark%20silver%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Tecno%20Camon%2030%20CL6%20screen%20display%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "inf_smart5", "cat": "transsion", "brand": "Infinix", "model": "Infinix Smart 5", "code": "X657", "is_new": true, "phone_q": "Infinix Smart 5 X657 ocean wave black front back", "part_q": "Infinix Smart 5 X657 LCD screen display digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Infinix%20Smart%205%20X657%20ocean%20wave%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Infinix%20Smart%205%20X657%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "inf_smart6", "cat": "transsion", "brand": "Infinix", "model": "Infinix Smart 6", "code": "X6511 • Universal w/ Pop 5 / A58", "is_new": true, "phone_q": "Infinix Smart 6 X6511 purple ocean blue black front back", "part_q": "Infinix Smart 6 X6511 LCD screen display digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Infinix%20Smart%206%20X6511%20purple%20ocean%20blue%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Infinix%20Smart%206%20X6511%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "inf_smart7", "cat": "transsion", "brand": "Infinix", "model": "Infinix Smart 7", "code": "X6515 • Universal w/ Pop 7 / A60", "is_new": true, "phone_q": "Infinix Smart 7 X6515 emerald green blue front back", "part_q": "Infinix Smart 7 X6515 LCD screen display digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Infinix%20Smart%207%20X6515%20emerald%20green%20blue%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Infinix%20Smart%207%20X6515%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "inf_smart8", "cat": "transsion", "brand": "Infinix", "model": "Infinix Smart 8", "code": "X6525 • Universal w/ Pop 8 / Spark 20 / A70", "is_new": true, "phone_q": "Infinix Smart 8 X6525 timber black gold green front back", "part_q": "Infinix Smart 8 X6525 LCD screen display digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Infinix%20Smart%208%20X6525%20timber%20black%20gold%20green%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Infinix%20Smart%208%20X6525%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "inf_hot10", "cat": "transsion", "brand": "Infinix", "model": "Infinix Hot 10", "code": "X682", "is_new": true, "phone_q": "Infinix Hot 10 X682 obsidian black ocean wave front back", "part_q": "Infinix Hot 10 X682 LCD screen display digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Infinix%20Hot%2010%20X682%20obsidian%20black%20ocean%20wave%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Infinix%20Hot%2010%20X682%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "inf_hot11", "cat": "transsion", "brand": "Infinix", "model": "Infinix Hot 11", "code": "X662", "is_new": true, "phone_q": "Infinix Hot 11 X662 silver wave purple black front back", "part_q": "Infinix Hot 11 X662 LCD screen display digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Infinix%20Hot%2011%20X662%20silver%20wave%20purple%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Infinix%20Hot%2011%20X662%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "inf_hot12", "cat": "transsion", "brand": "Infinix", "model": "Infinix Hot 12", "code": "X6817", "is_new": true, "phone_q": "Infinix Hot 12 X6817 legend white black blue front back", "part_q": "Infinix Hot 12 X6817 LCD screen display digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Infinix%20Hot%2012%20X6817%20legend%20white%20black%20blue%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Infinix%20Hot%2012%20X6817%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "inf_hot20", "cat": "transsion", "brand": "Infinix", "model": "Infinix Hot 20", "code": "X6826", "phone_q": "Infinix Hot 20 X6826 sonic black blue purple front back", "part_q": "Infinix Hot 20 X6826 LCD screen display digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "34", "usd": "4.72"}], "phone_img": "https://tse2.mm.bing.net/th?q=Infinix%20Hot%2020%20X6826%20sonic%20black%20blue%20purple%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Infinix%20Hot%2020%20X6826%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "inf_hot30", "cat": "transsion", "brand": "Infinix", "model": "Infinix Hot 30", "code": "X6831", "phone_q": "Infinix Hot 30 X6831 surfing green racing black front back", "part_q": "Infinix Hot 30 X6831 LCD screen display digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "36.5", "usd": "5.07"}], "phone_img": "https://tse2.mm.bing.net/th?q=Infinix%20Hot%2030%20X6831%20surfing%20green%20racing%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Infinix%20Hot%2030%20X6831%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "inf_hot30i", "cat": "transsion", "brand": "Infinix", "model": "Infinix Hot 30i", "code": "X669", "is_new": true, "phone_q": "Infinix Hot 30i X669 glacier blue black white front back", "part_q": "Infinix Hot 30i X669 LCD screen display digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Infinix%20Hot%2030i%20X669%20glacier%20blue%20black%20white%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Infinix%20Hot%2030i%20X669%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "inf_hot40i", "cat": "transsion", "brand": "Infinix", "model": "Infinix Hot 40i", "code": "X6528 • Universal w/ Smart 8 / Pop 8", "is_new": true, "phone_q": "Infinix Hot 40i X6528 horizon gold palm blue black front back", "part_q": "Infinix Hot 40i X6528 LCD screen display digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=Infinix%20Hot%2040i%20X6528%20horizon%20gold%20palm%20blue%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=Infinix%20Hot%2040i%20X6528%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "itel_a58", "cat": "transsion", "brand": "itel", "model": "itel A58 / A58 Pro", "code": "A58 • Universal w/ Smart 6", "is_new": true, "phone_q": "itel A58 sky cyan starry black front back", "part_q": "itel A58 LCD screen display digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=itel%20A58%20sky%20cyan%20starry%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=itel%20A58%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "itel_a60", "cat": "transsion", "brand": "itel", "model": "itel A60 / A60s", "code": "A662L • Universal w/ Smart 7 / Pop 7", "is_new": true, "phone_q": "itel A60 A60s dawn blue green black front back", "part_q": "itel A60 A662L LCD screen display digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=itel%20A60%20A60s%20dawn%20blue%20green%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=itel%20A60%20A662L%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "itel_a70", "cat": "transsion", "brand": "itel", "model": "itel A70", "code": "A665L • Universal w/ Pop 8 / Smart 8", "is_new": true, "phone_q": "itel A70 brilliant gold blue green black front back", "part_q": "itel A70 A665L LCD screen display digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=itel%20A70%20brilliant%20gold%20blue%20green%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=itel%20A70%20A665L%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "itel_p40", "cat": "transsion", "brand": "itel", "model": "itel P40", "code": "P662L • Universal w/ A60", "is_new": true, "phone_q": "itel P40 dreamy blue yellow black front back", "part_q": "itel P40 P662L LCD screen display digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=itel%20P40%20dreamy%20blue%20yellow%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=itel%20P40%20P662L%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "itel_p55", "cat": "transsion", "brand": "itel", "model": "itel P55 / P55 5G", "code": "A666L • Universal w/ A70 / Smart 8", "is_new": true, "phone_q": "itel P55 moonlit black aurora blue gold front back", "part_q": "itel P55 LCD screen display digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=itel%20P55%20moonlit%20black%20aurora%20blue%20gold%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=itel%20P55%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}, {"id": "itel_s23", "cat": "transsion", "brand": "itel", "model": "itel S23", "code": "S665L", "is_new": true, "phone_q": "itel S23 mystery white starry black front back", "part_q": "itel S23 S665L LCD screen display digitizer replacement", "tiers": [{"name": "Complete Screen Assembly", "cny": "Pending", "usd": "Pending"}], "phone_img": "https://tse2.mm.bing.net/th?q=itel%20S23%20mystery%20white%20starry%20black%20front%20back&w=300&h=280&c=7&rs=1&p=0", "part_img": "https://tse2.mm.bing.net/th?q=itel%20S23%20S665L%20LCD%20screen%20display%20digitizer%20replacement&w=300&h=280&c=7&rs=1&p=0"}];
+const REF_GUIDES = {"iphone_lcd": [{"title": "JK Incell Box (Budget LCD)", "desc": "FHD / IC-transferable Incell LCD <span class='ref-price-hint'>(¥70–¥215)</span>", "img": "https://tse2.mm.bing.net/th?q=JK%20Incell%20iPhone%20LCD%20screen%20replacement%20box%20packaging&w=340&h=240&c=7&rs=1&p=0"}, {"title": "JK Soft / Rigid OLED Box", "desc": "Aftermarket Rigid & Flexible OLED <span class='ref-price-hint'>(¥113–¥490)</span>", "img": "https://tse2.mm.bing.net/th?q=JK%20OLED%20iPhone%20screen%20display%20replacement%20packaging%20box&w=340&h=240&c=7&rs=1&p=0"}, {"title": "DD / SL Series OLED", "desc": "High-refresh & IC-transferable OLED <span class='ref-price-hint'>(¥143–¥327)</span>", "img": "https://tse2.mm.bing.net/th?q=iPhone%20OLED%20screen%20replacement%20assembly%20flex%20cable%20wholesale&w=340&h=240&c=7&rs=1&p=0"}], "iphone_bat": [{"title": "Standard High-Copy Battery (高仿)", "desc": "Standard aftermarket cell + flex <span class='ref-price-hint'>(¥8.5–¥120)</span>", "img": "https://tse2.mm.bing.net/th?q=iPhone%20internal%20replacement%20battery%20black%20with%20flex%20cable&w=340&h=240&c=7&rs=1&p=0"}, {"title": "Premium BMS Tier (iPhone 11 & 13)", "desc": "Upgraded cell & BMS chip <span class='ref-price-hint'>(¥21–¥22)</span>", "img": "https://tse2.mm.bing.net/th?q=iPhone%2011%2013%20replacement%20battery%20BMS%20chip%20flex%20cable&w=340&h=240&c=7&rs=1&p=0"}], "samsung_a": [{"title": "With Frame Assembly (带框总成)", "desc": "LCD pre-mounted in frame — fastest install for shops", "img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A%20series%20LCD%20screen%20assembly%20with%20frame%20replacement&w=340&h=240&c=7&rs=1&p=0"}, {"title": "No Frame / Bare LCD (单屏)", "desc": "Best Quality vs China Quality bare screen + flex", "img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20A12%20A13%20bare%20LCD%20screen%20display%20digitizer%20flex&w=340&h=240&c=7&rs=1&p=0"}, {"title": "Samsung Service Pack (100% Original)", "desc": "Genuine sealed Samsung box <span class='ref-price-hint'>(¥190–¥295)</span>", "img": "https://tse2.mm.bing.net/th?q=Samsung%20Service%20Pack%20original%20display%20screen%20replacement%20box&w=340&h=240&c=7&rs=1&p=0"}], "samsung_s": [{"title": "With Frame Original / Machine Laminated", "desc": "Complete AMOLED + middle frame assembly", "img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20S23%20Ultra%20screen%20replacement%20with%20frame%20assembly&w=340&h=240&c=7&rs=1&p=0"}, {"title": "Bare AMOLED Panel (No Frame)", "desc": "100% original bare display panel", "img": "https://tse2.mm.bing.net/th?q=Samsung%20Galaxy%20S22%20S23%20Ultra%20bare%20OLED%20screen%20display%20replacement&w=340&h=240&c=7&rs=1&p=0"}], "transsion": [{"title": "Transsion Complete Screen Assembly (传音总成)", "desc": "Many Tecno / Infinix / itel models share Universal LCDs", "img": "https://tse2.mm.bing.net/th?q=Tecno%20Spark%20Infinix%20Hot%20LCD%20screen%20display%20touch%20digitizer%20replacement&w=340&h=240&c=7&rs=1&p=0"}]};
+const STORAGE_KEY = 'somali_ethiopia_parts_survey_v2';
+let state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+let currentCat = 'all';
+let statusFilter = 'all';
+let isFlashcard = false;
+let refCollapsed = false;
+let fcIndex = 0;
+
+function makeFallbackSVG(label, isPart) {
+  const icon = isPart ? '🔧' : '📱';
+  const safe = label.replace(/[<>&"']/g, '');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="240" height="220" viewBox="0 0 240 220">
+    <rect width="240" height="220" fill="#f8fafc"/>
+    <rect x="65" y="22" width="110" height="150" rx="14" fill="#e2e8f0" stroke="#64748b" stroke-width="3"/>
+    <text x="120" y="102" font-size="34" text-anchor="middle" font-family="sans-serif">${icon}</text>
+    <text x="120" y="198" font-size="12" font-weight="bold" fill="#334155" text-anchor="middle" font-family="sans-serif">${safe.slice(0,26)}</text>
+  </svg>`;
+  return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  updateCounts();
+}
+
+function getItemState(id) {
+  if (!state[id]) state[id] = { status: '', tiers: {}, qty: '', note: '' };
+  if (!state[id].tiers) state[id].tiers = {};
+  return state[id];
+}
+
+function setRate(id, rate) {
+  const st = getItemState(id);
+  st.status = (st.status === rate) ? '' : rate;
+  if ((st.status === 'hot' || st.status === 'med') && Object.keys(st.tiers).length === 0) {
+    st.tiers[0] = true;
+  }
+  saveState();
+  if (isFlashcard && st.status) {
+    setTimeout(() => nextCard(), 160);
+  } else {
+    render();
+  }
+}
+
+function toggleTier(id, idx) {
+  const st = getItemState(id);
+  if (st.tiers[idx]) delete st.tiers[idx];
+  else st.tiers[idx] = true;
+  if (!st.status && Object.keys(st.tiers).length > 0) {
+    st.status = 'hot';
+  }
+  saveState();
+  render();
+}
+
+function setQty(id, q) {
+  const st = getItemState(id);
+  st.qty = (st.qty === q) ? '' : q;
+  saveState();
+  render();
+}
+
+function setNote(id, val) {
+  const st = getItemState(id);
+  st.note = val;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function openZoom(src, caption) {
+  document.getElementById('zoomImg').src = src;
+  document.getElementById('zoomCap').textContent = caption;
+  document.getElementById('zoomModal').classList.add('open');
+}
+
+function closeZoom() {
+  document.getElementById('zoomModal').classList.remove('open');
+}
+
+function setCat(cat) {
+  currentCat = cat;
+  fcIndex = 0;
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
+  render();
+}
+
+function setStatusFilter(sf) {
+  statusFilter = (statusFilter === sf) ? 'all' : sf;
+  fcIndex = 0;
+  render();
+}
+
+function togglePrices() {
+  document.body.classList.toggle('hide-prices');
+  const hidden = document.body.classList.contains('hide-prices');
+  const btn = document.getElementById('btnTogglePrice');
+  btn.textContent = hidden ? '🔒 Prices Hidden' : '🔓 Prices Shown';
+  btn.classList.toggle('active', !hidden);
+}
+
+function toggleMode() {
+  isFlashcard = !isFlashcard;
+  document.body.classList.toggle('flashcard-mode', isFlashcard);
+  const btn = document.getElementById('btnToggleMode');
+  btn.textContent = isFlashcard ? '🔲 Grid Mode' : '🃏 Flashcard Mode';
+  btn.classList.toggle('active', isFlashcard);
+  render();
+}
+
+function toggleRefBanner() {
+  refCollapsed = !refCollapsed;
+  renderRefBanner();
+}
+
+function resetAll() {
+  if (confirm('Clear all ratings and notes and start fresh?')) {
+    state = {};
+    saveState();
+    render();
+  }
+}
+
+function getFilteredItems() {
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  return ITEMS.filter(it => {
+    if (currentCat !== 'all' && it.cat !== currentCat) return false;
+    const st = getItemState(it.id);
+    if (statusFilter === 'unrated') {
+      if (st.status) return false;
+    } else if (statusFilter !== 'all') {
+      if (st.status !== statusFilter) return false;
+    }
+    if (q) {
+      const tierNames = it.tiers.map(t => t.name).join(' ');
+      const hay = (it.brand + ' ' + it.model + ' ' + it.code + ' ' + tierNames).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function renderRefBanner() {
+  const wrap = document.getElementById('refBannerWrap');
+  const guides = REF_GUIDES[currentCat];
+  if (!guides || !guides.length) {
+    wrap.innerHTML = '';
+    return;
+  }
+  const cards = guides.map(g => {
+    const safeTitle = g.title.replace(/['"]/g, '');
+    return `
+      <div class="ref-card">
+        <img src="${g.img}" alt="${g.title}" onclick="openZoom(this.src, '${safeTitle}')"
+             onerror="this.onerror=null;this.src=makeFallbackSVG('${safeTitle}',true)">
+        <div>
+          <h4>${g.title}</h4>
+          <p>${g.desc}</p>
+        </div>
+      </div>
+    `;
+  }).join('');
+  wrap.innerHTML = `
+    <div class="ref-section ${refCollapsed ? 'collapsed' : ''}">
+      <div class="ref-header" onclick="toggleRefBanner()">
+        <span>📦 Visual Box & Quality Grade Reference Guide (Show Shop Owner)</span>
+        <span>${refCollapsed ? '▼ Show Photos' : '▲ Hide Guide'}</span>
+      </div>
+      <div class="ref-grid">${cards}</div>
+    </div>
+  `;
+}
+
+function buildCardHTML(it) {
+  const st = getItemState(it.id);
+  const statusClass = st.status ? `status-${st.status}` : '';
+  const partLabel = it.cat === 'iphone_bat' ? '🔋 Battery Part' : '🔧 Screen Part';
+  const safeModel = it.model.replace(/['"]/g, '');
+
+  const tiersHTML = it.tiers.map((t, idx) => {
+    const sel = st.tiers && st.tiers[idx] ? 'selected' : '';
+    const priceStr = t.cny === 'Pending' ? 'Quote Pending' : `¥${t.cny} ($${t.usd})`;
+    return `
+      <div class="tier-item ${sel}" onclick="toggleTier('${it.id}', ${idx})">
+        <span class="tier-name">
+          <span class="tier-check">${sel ? '✓' : ''}</span>
+          <span>${t.name}</span>
+        </span>
+        <span class="tier-price">${priceStr}</span>
+      </div>
+    `;
+  }).join('');
+
+  const qtys = ['5 pcs', '10 pcs', '20 pcs', '50+ pcs'];
+  const qtyHTML = qtys.map(q =>
+    `<span class="qty-pill ${st.qty===q?'active':''}" onclick="setQty('${it.id}','${q}')">${q}</span>`
+  ).join('');
+  const safeNote = (st.note || '').replace(/"/g, '&quot;');
+
+  return `
+    <div class="card ${statusClass}">
+      <div class="badge-row">
+        <span class="badge badge-brand">${it.brand}</span>
+        ${it.is_new ? '<span class="badge badge-new">Added Fast-Mover</span>' : ''}
+      </div>
+      <div class="dual-img-wrap">
+        <div class="img-half" onclick="openZoom(this.querySelector('img').src, '${safeModel} — Phone Reference')">
+          <img src="${it.phone_img}" alt="${it.model} phone" loading="lazy"
+               onerror="this.onerror=null;this.src=makeFallbackSVG('${safeModel}',false)">
+          <span class="img-caption">📱 Phone</span>
+        </div>
+        <div class="img-half" onclick="openZoom(this.querySelector('img').src, '${safeModel} — Replacement Part')">
+          <img src="${it.part_img}" alt="${it.model} part" loading="lazy"
+               onerror="this.onerror=null;this.src=makeFallbackSVG('${safeModel}',true)">
+          <span class="img-caption">${partLabel}</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div>
+          <div class="model-title">${it.model}</div>
+          <div class="model-code">${it.code}</div>
+        </div>
+        <div>
+          <div class="tiers-label">Tap Grade That Sells Here:</div>
+          <div class="tiers-list">${tiersHTML}</div>
+        </div>
+        <div class="extra-box">
+          <div class="qty-row">
+            <span class="qty-lbl">Suggested Qty:</span>
+            ${qtyHTML}
+          </div>
+          <input type="text" class="note-input" placeholder="💬 Shop note (e.g. '4G only', 'top seller')..."
+                 value="${safeNote}" oninput="setNote('${it.id}', this.value)">
+        </div>
+        <div class="rate-btns">
+          <button class="r-btn hot ${st.status==='hot'?'active':''}" onclick="setRate('${it.id}','hot')">🔥 Fast</button>
+          <button class="r-btn med ${st.status==='med'?'active':''}" onclick="setRate('${it.id}','med')">👍 Medium</button>
+          <button class="r-btn skip ${st.status==='skip'?'active':''}" onclick="setRate('${it.id}','skip')">❌ Skip</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function updateCounts() {
+  let hot = 0, med = 0, skip = 0;
+  const catTotals = { all: ITEMS.length, iphone_lcd: 0, iphone_bat: 0, samsung_a: 0, samsung_s: 0, transsion: 0 };
+  const catRated = { all: 0, iphone_lcd: 0, iphone_bat: 0, samsung_a: 0, samsung_s: 0, transsion: 0 };
+
+  ITEMS.forEach(it => {
+    catTotals[it.cat] = (catTotals[it.cat] || 0) + 1;
+    const s = (state[it.id] && state[it.id].status) || '';
+    if (s) {
+      catRated.all++;
+      catRated[it.cat] = (catRated[it.cat] || 0) + 1;
+    }
+    if (s === 'hot') hot++;
+    else if (s === 'med') med++;
+    else if (s === 'skip') skip++;
+  });
+
+  const unrated = ITEMS.length - (hot + med + skip);
+  document.getElementById('cntHot').textContent = hot;
+  document.getElementById('cntMed').textContent = med;
+  document.getElementById('cntSkip').textContent = skip;
+  document.getElementById('cntUnrated').textContent = unrated;
+
+  ['hot','med','skip','unrated','all'].forEach(k => {
+    const el = document.getElementById('pill_' + k);
+    if (el) el.classList.toggle('active-filter', statusFilter === k && k !== 'all');
+  });
+
+  Object.keys(catTotals).forEach(cat => {
+    const el = document.getElementById('tabCnt_' + cat);
+    if (el) el.textContent = `${catRated[cat]}/${catTotals[cat]}`;
+  });
+
+  document.getElementById('progressText').textContent =
+    `Rated: ${catRated.all} / ${ITEMS.length} models (🔥 ${hot} Fast • 👍 ${med} Medium • ⏳ ${unrated} Left)`;
+}
+
+function render() {
+  updateCounts();
+  renderRefBanner();
+  const list = getFilteredItems();
+  const grid = document.getElementById('cardsGrid');
+  if (list.length === 0) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:45px;">No models match your current filter. Click "Show All" to view everything.</div>';
+  } else {
+    grid.innerHTML = list.map(buildCardHTML).join('');
+  }
+
+  if (isFlashcard) {
+    const slot = document.getElementById('fcSlot');
+    const counter = document.getElementById('fcCounter');
+    if (list.length === 0) {
+      slot.innerHTML = '<p style="text-align:center;color:#94a3b8;padding:40px;">No models match filter.</p>';
+      counter.textContent = '0 / 0';
+    } else {
+      if (fcIndex >= list.length) fcIndex = 0;
+      if (fcIndex < 0) fcIndex = list.length - 1;
+      counter.textContent = `${fcIndex + 1} / ${list.length}`;
+      slot.innerHTML = buildCardHTML(list[fcIndex]);
+    }
+  }
+}
+
+function nextCard() {
+  const list = getFilteredItems();
+  if (!list.length) return;
+  if (fcIndex < list.length - 1) fcIndex++;
+  else fcIndex = 0;
+  render();
+}
+
+function prevCard() {
+  const list = getFilteredItems();
+  if (!list.length) return;
+  if (fcIndex > 0) fcIndex--;
+  else fcIndex = list.length - 1;
+  render();
+}
+
+function generateSummaryText(includePrices) {
+  const hotList = [];
+  const medList = [];
+  ITEMS.forEach(it => {
+    const st = getItemState(it.id);
+    if (st.status === 'hot' || st.status === 'med') {
+      const chosenTiers = it.tiers
+        .filter((_, idx) => st.tiers && st.tiers[idx])
+        .map(t => includePrices && t.cny !== 'Pending' ? `${t.name} [¥${t.cny} / $${t.usd}]` : t.name);
+      const tierStr = chosenTiers.length ? chosenTiers.join(' + ') : it.tiers.map(t => t.name).join(' / ');
+      const qtyStr = st.qty ? ` | Qty: ${st.qty}` : '';
+      const noteStr = st.note ? ` | Note: ${st.note}` : '';
+      const line = `• [${it.brand}] ${it.model} (${it.code}) — ${tierStr}${qtyStr}${noteStr}`;
+      if (st.status === 'hot') hotList.push(line);
+      else medList.push(line);
+    }
+  });
+
+  let out = `=== SOMALIA / ETHIOPIA SHOP SURVEY RESULTS ===\n`;
+  out += `🔥 FAST MOVERS (MUST STOCK - ${hotList.length} Models):\n`;
+  out += (hotList.length ? hotList.join('\n') : '(None selected yet)') + `\n\n`;
+  out += `👍 MEDIUM MOVERS (SMALL STOCK - ${medList.length} Models):\n`;
+  out += (medList.length ? medList.join('\n') : '(None selected yet)') + `\n`;
+  return out;
+}
+
+function openSummaryModal() {
+  const pricesCurrentlyVisible = !document.body.classList.contains('hide-prices');
+  document.getElementById('chkExportPrices').checked = pricesCurrentlyVisible;
+  refreshSummaryModal();
+  document.getElementById('summaryModal').classList.add('open');
+}
+
+function refreshSummaryModal() {
+  const showP = document.getElementById('chkExportPrices').checked;
+  document.getElementById('summaryText').value = generateSummaryText(showP);
+}
+
+function closeSummaryModal() {
+  document.getElementById('summaryModal').classList.remove('open');
+}
+
+function copySummary() {
+  const ta = document.getElementById('summaryText');
+  ta.select();
+  navigator.clipboard.writeText(ta.value);
+  alert('Copied! Paste directly into WhatsApp or Notes.');
+}
+
+function shareWhatsApp() {
+  const text = document.getElementById('summaryText').value;
+  const url = 'https://wa.me/?text=' + encodeURIComponent(text);
+  window.open(url, '_blank');
+}
+
+function exportCSV() {
+  let rows = [['Category','Model','Code','Shop Rating','Selected Quality Grades','Suggested Qty','Shop Note','Price (CNY)','Price (USD)']];
+  ITEMS.forEach(it => {
+    const st = getItemState(it.id);
+    if (!st.status) return;
+    const label = st.status === 'hot' ? 'FAST MOVER' : (st.status === 'med' ? 'MEDIUM' : 'SKIP');
+    const chosen = it.tiers.filter((_, idx) => st.tiers && st.tiers[idx]);
+    const tiersUsed = chosen.length ? chosen : it.tiers;
+    rows.push([
+      it.brand,
+      it.model,
+      it.code,
+      label,
+      tiersUsed.map(t => t.name).join(' + '),
+      st.qty || '',
+      st.note || '',
+      tiersUsed.map(t => t.cny).join(' / '),
+      tiersUsed.map(t => t.usd).join(' / ')
+    ]);
+  });
+  const csvContent = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'Shop_Veteran_Survey_Results.csv';
+  a.click();
+}
+
+render();
+</script>
+</body>
+</html>
